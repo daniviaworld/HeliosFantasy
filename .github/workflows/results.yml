@@ -1,0 +1,37 @@
+name: Resultados y puntos
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Solo probar (no guarda nada en Firebase)'
+        type: boolean
+        default: true
+      full:
+        description: 'Rescanear toda la temporada desde agosto'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '*/30 * * * *'   # cada 30 minutos (GitHub puede retrasarlo unos minutos)
+
+concurrency:
+  group: results
+  cancel-in-progress: false
+
+jobs:
+  results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependencias
+        run: npm ci --prefix scripts
+      - name: Actualizar resultados y puntos
+        run: node scripts/results.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
+          FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.full && '1' || '' }}
