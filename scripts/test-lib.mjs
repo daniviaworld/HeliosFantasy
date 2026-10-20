@@ -61,4 +61,17 @@ assert.equal(cat.players.find((p) => p.a === 6).v, 1.0);
 assert.equal(cat.players.find((p) => p.a === 6).num, null);
 assert.equal(cat.teams.length, 2);
 assert.ok(JSON.stringify(cat).length < 2000);
+{
+  const { pickCoach, coachEntry } = await import('./lib.mjs');
+  const list = [
+    { id: 9, name: 'X. Viejo', career: [{ team: { id: 541 }, start: '2010-01', end: '2012-01' }] },
+    { id: 7, name: 'C. Ancelotti', career: [{ team: { id: 541 }, start: '2021-06', end: null }] },
+  ];
+  assert.equal(pickCoach(list, 541).id, 7, 'elige al entrenador sin fecha de fin');
+  assert.equal(pickCoach([{ id: 3, name: 'A', career: [] }], 541).id, 3, 'si solo hay uno, ese');
+  assert.equal(pickCoach(list.slice(0, 1).concat(list.slice(0, 1)), 541), null, 'ambiguo: ninguno');
+  assert.equal(pickCoach([], 541), null);
+  assert.deepEqual(coachEntry(list[1], 'RMA'), { a: -7, n: 'C. Ancelotti', t: 'RMA', p: 'ENT', v: 1, num: null });
+  assert.equal(coachEntry({ id: 1 }, 'RMA'), null);
+}
 console.log('Todas las pruebas del cargador pasan.');

@@ -19,8 +19,13 @@ export function freePlayers(base, members, exclude = []) {
   return Object.keys(base).filter((a) => !taken.has(a));
 }
 
+// Siempre salen algunos entrenadores en el mercado (hasta COACHES), el resto jugadores.
+export const COACHES = 2;
 export function newCpuListings(base, members, perDay, rng = Math.random, exclude = []) {
-  return shuffle(freePlayers(base, members, exclude), rng).slice(0, perDay).map(Number);
+  const free = freePlayers(base, members, exclude).map(Number);
+  const coaches = shuffle(free.filter((a) => a < 0), rng).slice(0, Math.min(COACHES, Math.floor(perDay / 2)));
+  const rest = shuffle(free.filter((a) => a >= 0), rng).slice(0, perDay - coaches.length);
+  return shuffle(coaches.concat(rest), rng);
 }
 
 export function initialState(now, base, members, perDay, rng = Math.random) {
@@ -76,6 +81,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     const buyer = M[win.uid];
     buyer.cash = r2(buyer.cash - win.amt);
     buyer.squad = [...(buyer.squad || []), a];
+    if (a < 0 && buyer.coach == null) buyer.coach = a;
     buyer.saved = false;
     changed.add(win.uid);
     if (!cpu) {
@@ -84,6 +90,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
       s.squad = s.squad.filter((x) => String(x) !== String(a));
       for (const pos of Object.keys(s.lineup || {})) s.lineup[pos] = s.lineup[pos].map((x) => (String(x) === String(a) ? null : x));
       if (s.role) delete s.role[a];
+      if (s.coach != null && String(s.coach) === String(a)) s.coach = (s.squad.find((x) => x < 0) ?? null);
       if (s.selling) delete s.selling[a];
       s.saved = false;
       changed.add(L.seller);
@@ -100,7 +107,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     m.pl = m.squad.length;
     m.val = r2(m.squad.reduce((s, a) => s + val(a), 0));
     m.rev = (m.rev || 0) + 1;
-    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup, role: m.role || {}, selling: m.selling || {}, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev };
+    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup, role: m.role || {}, selling: m.selling || {}, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach };
   }
   let end = (state.end || now) + DAY;
   if (end <= now + 3600 * 1000) end = now + DAY;

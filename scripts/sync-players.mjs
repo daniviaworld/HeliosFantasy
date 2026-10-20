@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { parse } from 'csv-parse/sync';
-import { pickTeams, makeCodes, buildValueIndex, buildCatalog } from './lib.mjs';
+import { pickTeams, makeCodes, buildValueIndex, buildCatalog, pickCoach, coachEntry } from './lib.mjs';
 
 const KEY = process.env.API_FOOTBALL_KEY;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -64,11 +64,34 @@ for (const { want, team } of found) {
   if (squads[team.id].length < 15) console.warn(`Plantilla corta en ${want.label}: ${squads[team.id].length} jugadores`);
 }
 
+// Entrenadores (si la API falla para un equipo, se conserva el que ya había en el catálogo)
+let admin = null, previous = null;
+if (!DRY) {
+  admin = (await import('firebase-admin')).default;
+  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(SA)) });
+  const prev = await admin.firestore().doc('catalog/main').get();
+  previous = prev.exists ? prev.data() : null;
+}
+const coaches = [];
+for (const { want, team } of found) {
+  const code = codes[team.id];
+  let entry = null;
+  try {
+    const j = await api(`/coachs?team=${team.id}`);
+    entry = coachEntry(pickCoach(j.response, team.id), code);
+  } catch (e) { console.warn(`Entrenador de ${want.label}: ${e.message}`); }
+  if (!entry && previous) entry = (previous.players || []).find((x) => x.p === 'ENT' && x.t === code) || null;
+  if (entry) coaches.push(entry); else console.warn(`Sin entrenador para ${want.label}`);
+}
+console.log(`Entrenadores: ${coaches.length}`);
+
 const idx = await loadValues();
-const { teams, players, stats } = buildCatalog(found, codes, squads, idx);
+const built = buildCatalog(found, codes, squads, idx);
+const { teams, stats } = built;
+const players = built.players.concat(coaches);
 console.log(`Jugadores: ${stats.players} (con valor de mercado: ${stats.priced}, con precio por posición: ${stats.defaulted}, descartados: ${stats.skipped})`);
 console.log('Por equipo:', JSON.stringify(stats.perTeam));
-if (players.length < 300 && !process.env.FORCE) { console.error('Muy pocos jugadores. No se actualiza nada.'); process.exit(1); }
+if (built.players.length < 300 && !process.env.FORCE) { console.error('Muy pocos jugadores. No se actualiza nada.'); process.exit(1); }
 
 const doc = { season: '2026/27', teams, players };
 const size = Buffer.byteLength(JSON.stringify(doc));
@@ -80,7 +103,5 @@ if (DRY) {
   console.log('DRY_RUN: no se escribe en Firestore. Vista previa en catalog-preview.json');
   process.exit(0);
 }
-const { default: admin } = await import('firebase-admin');
-admin.initializeApp({ credential: admin.credential.cert(JSON.parse(SA)) });
 await admin.firestore().doc('catalog/main').set({ ...doc, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
 console.log('Catálogo guardado en Firestore: catalog/main');

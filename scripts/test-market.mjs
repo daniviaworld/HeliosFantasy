@@ -44,4 +44,16 @@ ok(r3.memberUpdates.u3.squad.length === 2 && r3.memberUpdates.u3.cash === 0, 'so
 // 5) anónimo
 const r4 = planClose({ now: 5000, state: st0, members, bids: { u1: { 10: 3 } }, base, rng, anon: true });
 ok(r4.news.filter((n) => n.to === null).every((n) => !/Paco/.test(n.x)), 'modo anónimo oculta nombres');
+// 6) entrenadores
+{
+  const b2 = { ...base, '-1': { n: 'Entr 1', v: 1, t: 'RMA', p: 'ENT' }, '-2': { n: 'Entr 2', v: 1, t: 'FCB', p: 'ENT' }, '-3': { n: 'Entr 3', v: 1, t: 'ATM', p: 'ENT' } };
+  const ini2 = initialState(0, b2, members, 8, rng);
+  ok(ini2.listings.filter((a) => a < 0).length === 2, 'el mercado inicial incluye 2 entrenadores');
+  const mm = JSON.parse(JSON.stringify(members));
+  mm.u1.squad.push(-1); mm.u1.coach = -1; mm.u1.selling[-1] = 1;
+  const rc = planClose({ now: 5000, state: { ...st0, listings: [-2] }, members: mm, bids: { u2: { '-1': 2, '-2': 1.5 } }, base: b2, perDay: 6, rng });
+  ok(rc.memberUpdates.u2.squad.includes(-1) && rc.memberUpdates.u2.squad.includes(-2), 'u2 ficha dos entrenadores');
+  ok(rc.memberUpdates.u2.coach === -1 || rc.memberUpdates.u2.coach === -2, 'se asigna entrenador si no tenía');
+  ok(rc.memberUpdates.u1.coach === null && !rc.memberUpdates.u1.squad.includes(-1), 'el vendedor se queda sin entrenador');
+}
 console.log(fail ? 'FALLOS ' + fail : 'TODO OK'); process.exit(fail ? 1 : 0);

@@ -103,3 +103,18 @@ export function buildCatalog(picked, codes, squads, idx) {
   }
   return { teams, players, stats };
 }
+
+// Entrenadores: la API devuelve los de un equipo con su carrera; el actual es el que no tiene fecha de fin en ese equipo.
+export const COACH_VALUE = 1;
+export function pickCoach(list, teamId) {
+  if (!Array.isArray(list) || !list.length) return null;
+  const cur = list.find((c) => (c.career || []).some((k) => k.team && k.team.id === teamId && k.end == null));
+  if (cur) return cur;
+  return list.length === 1 ? list[0] : null;
+}
+// Los entrenadores entran en el catálogo como jugadores con posición ENT y id negativo (-id de la API),
+// así nunca chocan con los ids de jugadores y el mercado los trata igual.
+export function coachEntry(c, code) {
+  if (!c || c.id == null || !c.name) return null;
+  return { a: -Math.abs(c.id), n: c.name, t: code, p: 'ENT', v: COACH_VALUE, num: null };
+}
