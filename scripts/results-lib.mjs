@@ -55,26 +55,48 @@ export function parseScoreboard(json) {
 }
 
 // Jornada = número de partido de cada equipo (aguanta aplazamientos de forma aproximada).
-// Jornadas por ventana de fechas: un partido entra en la jornada abierta si cae a <=4 días de su inicio
-// y ninguno de sus equipos juega ya en ella; si no, abre una jornada nueva.
-export function assignRounds(matches) {
+// Jornadas: 1) se agrupan los partidos por ventanas de fechas (<=4 días desde el primero y sin repetir equipo);
+// 2) los grupos "completos" (>=6 partidos) son las jornadas reales, numeradas por orden;
+// 3) un partido suelto (aplazado) se asigna a la primera jornada real en la que ninguno de sus dos equipos jugó;
+//    si no hay ninguna (final del calendario aún incompleto) abre una jornada nueva.
+export function assignRounds(matches, minFull = 6) {
   const sorted = matches.slice().sort((x, y) => x.d.localeCompare(y.d) || x.id.localeCompare(y.id));
-  const rounds = [];
-  const DAY = 86400000;
+  const DAY = 86400000, clusters = [];
   for (const m of sorted) {
     const t = +new Date(m.d);
-    let r = null;
-    for (let i = rounds.length - 1; i >= 0 && i >= rounds.length - 2; i--) {
-      const R = rounds[i];
-      if (t - R.start <= 4 * DAY && !R.teams.has(m.h.id) && !R.teams.has(m.a.id)) { r = R; break; }
+    let c = null;
+    for (let i = clusters.length - 1; i >= 0 && i >= clusters.length - 2; i--) {
+      const C = clusters[i];
+      if (t - C.start <= 4 * DAY && !C.teams.has(m.h.id) && !C.teams.has(m.a.id)) { c = C; break; }
     }
-    if (!r) { r = { start: t, teams: new Set(), n: rounds.length + 1 }; rounds.push(r); }
-    r.teams.add(m.h.id); r.teams.add(m.a.id); m.r = r.n;
+    if (!c) { c = { start: t, teams: new Set(), ms: [] }; clusters.push(c); }
+    c.teams.add(m.h.id); c.teams.add(m.a.id); c.ms.push(m);
   }
+  const rounds = [];            // jornadas reales
+  const loose = [];
+  for (const c of clusters) {
+    if (c.ms.length >= minFull) rounds.push({ teams: new Set(c.teams), ms: c.ms.slice() });
+    else loose.push(...c.ms);
+  }
+  const extra = [];             // jornadas nuevas al final
+  for (const m of loose.sort((x, y) => x.d.localeCompare(y.d))) {
+    let r = rounds.find((R) => !R.teams.has(m.h.id) && !R.teams.has(m.a.id));
+    if (!r) r = extra.find((R) => !R.teams.has(m.h.id) && !R.teams.has(m.a.id));
+    if (!r) { r = { teams: new Set(), ms: [] }; extra.push(r); }
+    r.teams.add(m.h.id); r.teams.add(m.a.id); r.ms.push(m);
+  }
+  const all = rounds.concat(extra);
+  all.forEach((R, i) => R.ms.forEach((m) => { m.r = i + 1; }));
   return sorted;
 }
+// Partidos "de la jornada" (no aplazados): los que caen a <=4 días del primero de su jornada.
+export function coreMatches(matches) {
+  const first = {};
+  for (const m of matches) { const t = +new Date(m.d); if (first[m.r] == null || t < first[m.r]) first[m.r] = t; }
+  return matches.filter((m) => +new Date(m.d) - first[m.r] <= 4 * 86400000);
+}
 export function currentRound(matches) {
-  const open = matches.filter((m) => m.st !== 'post');
+  const open = coreMatches(matches).filter((m) => m.st !== 'post');
   if (open.length) return Math.min(...open.map((m) => m.r));
   return matches.length ? Math.max(...matches.map((m) => m.r)) : 1;
 }

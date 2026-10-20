@@ -27,7 +27,7 @@ const ms = parseScoreboard({ events: [
   sb('9', '2026-10-10T16:30Z', ['541', 'Real Madrid'], ['530', 'Atlético Madrid'], 1, 1, true),
 ] });
 assert.equal(ms.length, 3); assert.equal(ms[0].st, 'post'); assert.equal(ms[1].st, 'pre'); assert.equal(ms[0].h.s, 2);
-const rs = assignRounds(ms);
+const rs = assignRounds(ms, 1);
 assert.deepEqual(rs.map((m) => m.id + ':' + m.r), ['9:1', '10:2', '11:3'], 'rondas por ventana de fechas');
 assert.equal(currentRound(rs), 3);
 // ---- resumen de un partido (forma de ESPN)
@@ -75,7 +75,21 @@ console.log('Todas las pruebas de resultados pasan.');
 // jornada de fin de semana + aplazado
 {
   const t = (id, d, h, a) => ({ id, d, h: { id: h }, a: { id: a }, st: 'post' });
-  const w = assignRounds([t('1', '2026-08-15T18:00Z', 'a', 'b'), t('2', '2026-08-16T18:00Z', 'c', 'd'), t('3', '2026-08-17T18:00Z', 'e', 'f'), t('4', '2026-08-22T18:00Z', 'a', 'c'), t('5', '2026-08-23T18:00Z', 'b', 'd')]);
+  const w = assignRounds([t('1', '2026-08-15T18:00Z', 'a', 'b'), t('2', '2026-08-16T18:00Z', 'c', 'd'), t('3', '2026-08-17T18:00Z', 'e', 'f'), t('4', '2026-08-22T18:00Z', 'a', 'c'), t('5', '2026-08-23T18:00Z', 'b', 'd')], 2);
   assert.deepEqual(w.map((m) => m.r), [1, 1, 1, 2, 2]);
+}
+// aplazado: el partido e-f de la J1 se juega el 3 de octubre y no debe desplazar la numeración
+{
+  const t = (id, d, h, a, st = 'post') => ({ id, d, h: { id: h }, a: { id: a }, st });
+  const w = assignRounds([
+    t('1', '2026-08-15T18:00Z', 'a', 'b'), t('2', '2026-08-16T18:00Z', 'c', 'd'),
+    t('3', '2026-08-22T18:00Z', 'a', 'c'), t('4', '2026-08-23T18:00Z', 'b', 'd'), t('5', '2026-08-23T20:00Z', 'e', 'f'),
+    t('6', '2026-08-29T18:00Z', 'a', 'd'), t('7', '2026-08-30T18:00Z', 'b', 'c'), t('8', '2026-08-30T20:00Z', 'e', 'f'),
+    t('9', '2026-10-03T18:00Z', 'e', 'f', 'pre'),
+  ], 2);
+  const by = Object.fromEntries(w.map((m) => [m.id, m.r]));
+  assert.equal(by['1'], 1); assert.equal(by['3'], 2); assert.equal(by['6'], 3);
+  assert.equal(by['9'], 1, 'el aplazado va a la jornada donde faltaba');
+  assert.equal(currentRound(w), 3, 'el aplazado no cuenta como jornada actual');
 }
 console.log('rounds ok');
