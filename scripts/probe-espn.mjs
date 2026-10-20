@@ -1,32 +1,45 @@
-// Prueba: ¿qué datos de LaLiga da la API pública de ESPN (la misma que usa el bot de clasificaciones)?
-const B = 'https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1';
-const get = async (u) => { const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' } }); console.log(`\n== ${u}\n   HTTP ${r.status}`); return r.ok ? r.json() : null; };
+const H = { 'User-Agent': 'Mozilla/5.0' };
+const E = 'https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1';
+const S = 'https://www.thesportsdb.com/api/v1/json/3';
 const ymd = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
-const now = new Date(), from = new Date(now - 14 * 864e5), to = new Date(+now + 14 * 864e5);
-
-const sb = await get(`${B}/scoreboard?dates=${ymd(from)}-${ymd(to)}&limit=100`);
-const evs = (sb && sb.events) || [];
-console.log(`   partidos entre ${ymd(from)} y ${ymd(to)}: ${evs.length}`);
-for (const e of evs) {
-  const c = e.competitions[0].competitors.map((x) => `${x.team.displayName} ${x.score}`).join(' - ');
-  console.log(`   ${e.id} · ${e.date} · ${e.status.type.name} · ${c}`);
+const day = (n) => new Date(Date.now() + n * 864e5);
+async function get(u) {
+  const r = await fetch(u, { headers: H });
+  let j = null; try { j = await r.json(); } catch {}
+  console.log(`\n== ${u}\n   HTTP ${r.status}`);
+  return r.ok ? j : null;
 }
-const done = evs.find((e) => e.status.type.completed);
+function listEvents(j) {
+  const ev = (j && j.events) || [];
+  console.log(`   partidos: ${ev.length}`);
+  for (const e of ev.slice(0, 12)) {
+    const c = e.competitions[0].competitors.map((x) => `${x.team.displayName} ${x.score}`).join(' - ');
+    console.log(`   ${e.id} · ${e.date} · ${e.status.type.name} · ${c}`);
+  }
+  return ev;
+}
+let all = [];
+for (const u of [`${E}/scoreboard`, `${E}/scoreboard?dates=${ymd(day(-1))}`, `${E}/scoreboard?dates=${ymd(day(-3))}`, `${E}/scoreboard?dates=${ymd(day(-7))}-${ymd(day(-1))}`, `${E}/scoreboard?dates=${ymd(day(0))}-${ymd(day(7))}`, `${E}/teams/86/schedule`]) {
+  const j = await get(u);
+  if (j && j.events) all = all.concat(listEvents(j));
+  else if (j && j.team) { console.log('   (calendario de equipo)', Object.keys(j).join(',')); const ev = j.events || []; console.log('   eventos del equipo:', ev.length); all = all.concat(ev.map((e) => ({ id: e.id, status: e.competitions && e.competitions[0] && e.competitions[0].status || {}, date: e.date }))); }
+}
+const done = all.find((e) => e.status && e.status.type && e.status.type.completed);
 if (done) {
-  const s = await get(`${B}/summary?event=${done.id}`);
+  const s = await get(`${E}/summary?event=${done.id}`);
   if (s) {
     console.log('   claves del resumen:', Object.keys(s).join(', '));
     const r = (s.rosters || [])[0];
     console.log('   rosters[0] claves:', r ? Object.keys(r).join(', ') : 'no hay');
     const p = r && (r.roster || [])[0];
-    if (p) console.log('   jugador ejemplo:', JSON.stringify(p).slice(0, 900));
-    const k = (s.keyEvents || []).slice(0, 4);
-    console.log('   keyEvents:', (s.keyEvents || []).length, JSON.stringify(k).slice(0, 700));
+    if (p) console.log('   jugador ejemplo:', JSON.stringify(p).slice(0, 1200));
+    console.log('   keyEvents:', (s.keyEvents || []).length, JSON.stringify((s.keyEvents || []).slice(0, 3)).slice(0, 700));
     const d = (s.header && s.header.competitions && s.header.competitions[0] && s.header.competitions[0].details) || [];
-    console.log('   details (goles/tarjetas):', d.length, JSON.stringify(d.slice(0, 3)).slice(0, 500));
+    console.log('   details:', d.length, JSON.stringify(d.slice(0, 3)).slice(0, 500));
   }
-} else console.log('   (no hay ningún partido terminado en esa ventana)');
-
-const t = await get('https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=' + now.toISOString().slice(0, 10) + '&l=Spanish%20La%20Liga');
-console.log('   TheSportsDB hoy:', t && (t.events || []).length);
+} else console.log('\n(no se encontró ningún partido terminado)');
+for (const u of [`${S}/eventspastleague.php?id=4335`, `${S}/eventsnextleague.php?id=4335`, `${S}/searchteams.php?t=Real%20Madrid`]) {
+  const j = await get(u);
+  if (j) { const ev = j.events || j.teams || []; console.log(`   resultados: ${ev.length}`, ev[0] ? JSON.stringify(ev[0]).slice(0, 300) : ''); }
+}
 console.log('\nHecho. Copia este resultado y pásaselo a Claude.');
