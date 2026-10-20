@@ -55,12 +55,21 @@ export function parseScoreboard(json) {
 }
 
 // Jornada = número de partido de cada equipo (aguanta aplazamientos de forma aproximada).
+// Jornadas por ventana de fechas: un partido entra en la jornada abierta si cae a <=4 días de su inicio
+// y ninguno de sus equipos juega ya en ella; si no, abre una jornada nueva.
 export function assignRounds(matches) {
-  const cnt = {};
   const sorted = matches.slice().sort((x, y) => x.d.localeCompare(y.d) || x.id.localeCompare(y.id));
+  const rounds = [];
+  const DAY = 86400000;
   for (const m of sorted) {
-    const r = Math.max(cnt[m.h.id] || 0, cnt[m.a.id] || 0) + 1;
-    cnt[m.h.id] = r; cnt[m.a.id] = r; m.r = r;
+    const t = +new Date(m.d);
+    let r = null;
+    for (let i = rounds.length - 1; i >= 0 && i >= rounds.length - 2; i--) {
+      const R = rounds[i];
+      if (t - R.start <= 4 * DAY && !R.teams.has(m.h.id) && !R.teams.has(m.a.id)) { r = R; break; }
+    }
+    if (!r) { r = { start: t, teams: new Set(), n: rounds.length + 1 }; rounds.push(r); }
+    r.teams.add(m.h.id); r.teams.add(m.a.id); m.r = r.n;
   }
   return sorted;
 }

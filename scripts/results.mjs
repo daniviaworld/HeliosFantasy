@@ -11,10 +11,11 @@ if (!SA && !DRY) { console.error('Falta FIREBASE_SERVICE_ACCOUNT'); process.exit
 const E = 'https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1';
 const H = { 'User-Agent': 'Mozilla/5.0' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Devuelve el JSON, o null si tras varios intentos no hay respuesta válida (nunca se da por bueno un hueco).
 async function get(u) {
-  for (let i = 1; i <= 3; i++) {
-    try { const r = await fetch(u, { headers: H }); if (r.ok) return await r.json(); if (r.status === 400 || r.status === 404) return null; } catch {}
-    await sleep(1500 * i);
+  for (let i = 1; i <= 5; i++) {
+    try { const r = await fetch(u, { headers: H }); if (r.ok) return await r.json(); console.warn(`   (HTTP ${r.status} en ${u.replace(E, '')}, intento ${i})`); } catch (e) { console.warn(`   (error de red en ${u.replace(E, '')}, intento ${i})`); }
+    await sleep(1200 * i);
   }
   return null;
 }
@@ -48,17 +49,29 @@ const end = new Date(+now + 14 * day);
 const all = new Map();
 for (const m of (prevFx && prevFx.matches) || []) all.set(m.id, { id: m.id, d: m.d, h: { id: m.hi, n: m.hn, s: m.hs }, a: { id: m.ai, n: m.an, s: m.as }, st: m.st });
 let calls = 0;
+const failedDays = [];
 for (let t = new Date(start); t <= end; t = new Date(+t + day)) {
   const j = await get(`${E}/scoreboard?dates=${ymd(t)}`); calls++;
+  if (!j) { failedDays.push(ymd(t)); continue; }
   for (const m of parseScoreboard(j)) {
     if (!teamCode(m.h.n) || !teamCode(m.a.n)) continue;
     all.set(m.id, m);
   }
-  await sleep(150);
+  await sleep(450);
+}
+if (failedDays.length) {
+  console.error(`ERROR: ESPN no respondió para ${failedDays.length} días: ${failedDays.join(', ')}. No se guarda nada para no dejar el calendario incompleto.`);
+  process.exit(1);
 }
 const matches = assignRounds([...all.values()]);
 const round = currentRound(matches);
 console.log(`Calendario: ${matches.length} partidos (${calls} consultas) · jornada actual: ${round}`);
+{
+  const per = {}; for (const m of matches) per[m.r] = (per[m.r] || 0) + 1;
+  console.log('Partidos por jornada:', Object.keys(per).map((r) => `J${r}:${per[r]}`).join(' '));
+  const odd = Object.keys(per).filter((r) => +r < round && per[r] !== Math.floor(cat.teams.length / 2));
+  if (odd.length) console.warn(`AVISO: jornadas con un número raro de partidos (esperado ${Math.floor(cat.teams.length / 2)}): ${odd.map((r) => 'J' + r + '=' + per[r]).join(', ')}`);
+}
 
 // 2) puntos de los partidos terminados que aún no están procesados
 let processed = 0;

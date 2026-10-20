@@ -28,8 +28,8 @@ const ms = parseScoreboard({ events: [
 ] });
 assert.equal(ms.length, 3); assert.equal(ms[0].st, 'post'); assert.equal(ms[1].st, 'pre'); assert.equal(ms[0].h.s, 2);
 const rs = assignRounds(ms);
-assert.deepEqual(rs.map((m) => m.id + ':' + m.r), ['9:1', '10:1', '11:2'], 'rondas por orden de partido de cada equipo');
-assert.equal(currentRound(rs), 2);
+assert.deepEqual(rs.map((m) => m.id + ':' + m.r), ['9:1', '10:2', '11:3'], 'rondas por ventana de fechas');
+assert.equal(currentRound(rs), 3);
 // ---- resumen de un partido (forma de ESPN)
 const ath = (id, full, short, pos) => ({ id, fullName: full, displayName: full, shortName: short, position: { abbreviation: pos } });
 const pr = (id, full, short, pos, o = {}) => ({ starter: !!o.starter, subbedIn: !!o.subbedIn, subbedOut: !!o.subbedOut, athlete: ath(id, full, short, pos), stats: o.stats || [] });
@@ -72,3 +72,10 @@ const r0 = scoreMatch({ match: m0, summary: sum0, teamCode: tc, matcher });
 const p0 = finalizePoints(r0, Object.fromEntries(players.map((p) => [p.a, p])));
 assert.equal(p0[2], 2 + 4, 'defensa con portería a cero'); assert.equal(p0[3], 2 + 4, 'portero con portería a cero');
 console.log('Todas las pruebas de resultados pasan.');
+// jornada de fin de semana + aplazado
+{
+  const t = (id, d, h, a) => ({ id, d, h: { id: h }, a: { id: a }, st: 'post' });
+  const w = assignRounds([t('1', '2026-08-15T18:00Z', 'a', 'b'), t('2', '2026-08-16T18:00Z', 'c', 'd'), t('3', '2026-08-17T18:00Z', 'e', 'f'), t('4', '2026-08-22T18:00Z', 'a', 'c'), t('5', '2026-08-23T18:00Z', 'b', 'd')]);
+  assert.deepEqual(w.map((m) => m.r), [1, 1, 1, 2, 2]);
+}
+console.log('rounds ok');
