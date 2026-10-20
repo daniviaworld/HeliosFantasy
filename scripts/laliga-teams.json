@@ -1,0 +1,22 @@
+[
+  {"label": "Barcelona",          "names": ["Barcelona", "FC Barcelona"]},
+  {"label": "Real Madrid",        "names": ["Real Madrid"]},
+  {"label": "Villarreal",         "names": ["Villarreal", "Villarreal CF"]},
+  {"label": "Atlético de Madrid", "names": ["Atletico Madrid", "Atletico de Madrid", "Atlético Madrid"]},
+  {"label": "Real Betis",         "names": ["Real Betis", "Betis"]},
+  {"label": "Celta",              "names": ["Celta Vigo", "Celta de Vigo", "Celta"]},
+  {"label": "Real Sociedad",      "names": ["Real Sociedad"]},
+  {"label": "Getafe",             "names": ["Getafe", "Getafe CF"]},
+  {"label": "Athletic Club",      "names": ["Athletic Club", "Athletic Bilbao"]},
+  {"label": "Valencia",           "names": ["Valencia", "Valencia CF"]},
+  {"label": "Sevilla",            "names": ["Sevilla", "Sevilla FC"]},
+  {"label": "Rayo Vallecano",     "names": ["Rayo Vallecano"]},
+  {"label": "Osasuna",            "names": ["Osasuna", "CA Osasuna"]},
+  {"label": "Espanyol",           "names": ["Espanyol", "RCD Espanyol"]},
+  {"label": "Alavés",             "names": ["Alaves", "Deportivo Alaves", "Alavés"]},
+  {"label": "Levante",            "names": ["Levante", "Levante UD"]},
+  {"label": "Elche",              "names": ["Elche", "Elche CF"]},
+  {"label": "Racing Santander",   "names": ["Racing Santander", "Racing de Santander", "Real Racing Club", "Racing Club Santander"]},
+  {"label": "Deportivo",          "names": ["Deportivo La Coruna", "Deportivo La Coruña", "RC Deportivo", "Deportivo de La Coruña", "Deportivo"]},
+  {"label": "Málaga",             "names": ["Malaga", "Málaga", "Malaga CF", "Málaga CF"]}
+]
