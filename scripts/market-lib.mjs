@@ -1,4 +1,5 @@
 // Lógica pura del cierre de mercado de una liga (sin Firebase, para poder probarla).
+import { LOCK_MS, CLAUSE_MULT } from './deals-lib.mjs';
 export const DAY = 24 * 3600 * 1000;
 export const MIN_VALUE = 0.16;
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -82,6 +83,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     buyer.cash = r2(buyer.cash - win.amt);
     buyer.squad = [...(buyer.squad || []), a];
     if (a < 0 && buyer.coach == null) buyer.coach = a;
+    buyer.pm = { ...(buyer.pm || {}), [a]: { l: now + LOCK_MS, c: r2(Math.max(win.amt, v) * CLAUSE_MULT) } };
     buyer.saved = false;
     changed.add(win.uid);
     if (!cpu) {
@@ -92,6 +94,8 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
       if (s.role) delete s.role[a];
       if (s.coach != null && String(s.coach) === String(a)) s.coach = (s.squad.find((x) => x < 0) ?? null);
       if (s.selling) delete s.selling[a];
+      if (s.pm) delete s.pm[a];
+      if (s.cap != null && String(s.cap) === String(a)) s.cap = null;
       s.saved = false;
       changed.add(L.seller);
       news.push({ k: 'fichaje', to: L.seller, x: `Vendes a ${pname(a)} a ${who(win.uid)} por ${fmt(win.amt)}.` });
@@ -107,7 +111,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     m.pl = m.squad.length;
     m.val = r2(m.squad.reduce((s, a) => s + val(a), 0));
     m.rev = (m.rev || 0) + 1;
-    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup, role: m.role || {}, selling: m.selling || {}, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach };
+    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup, role: m.role || {}, selling: m.selling || {}, pm: m.pm || {}, cap: m.cap == null ? null : m.cap, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach };
   }
   let end = (state.end || now) + DAY;
   if (end <= now + 3600 * 1000) end = now + DAY;
