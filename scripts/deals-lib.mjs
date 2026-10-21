@@ -52,7 +52,7 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
   const changed = new Set(), news = [], dealUpdates = {};
   const fail = (d, why, notify = true) => {
     dealUpdates[d.id] = { status: 'failed', note: why, doneAt: now };
-    if (notify && M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, x: `${d.type === 'clause' ? 'Clausulazo' : 'Oferta'} por ${pname(d.a)} no realizado: ${why}.` });
+    if (notify && M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, a: d.a, x: `${d.type === 'clause' ? 'Clausulazo' : 'Oferta'} por ${pname(d.a)} no realizado: ${why}.` });
   };
   const ordered = [...deals].sort((x, y) => (x.ts || 0) - (y.ts || 0));
   for (const d of ordered) {
@@ -60,7 +60,7 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
     if (d.status === 'pending' && d.type === 'offer') {
       if (now - (d.ts || 0) > OFFER_TTL) {
         dealUpdates[d.id] = { status: 'expired', note: 'caducada', doneAt: now };
-        if (M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, x: `Tu oferta por ${pname(a)} caducó sin respuesta.` });
+        if (M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, a: a, x: `Tu oferta por ${pname(a)} caducó sin respuesta.` });
       }
       continue;
     }
@@ -91,8 +91,8 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
     dealUpdates[d.id] = { status: 'done', note: fmt(price), price, doneAt: now };
     const how = d.type === 'clause' ? 'paga la cláusula de' : 'ficha a';
     news.push({ k: 'fichaje', to: d.seller, x: d.type === 'clause' ? `${who(d.buyer)} paga la cláusula de ${pname(a)}: ${fmt(price)}.` : `Vendes a ${pname(a)} a ${who(d.buyer)} por ${fmt(price)}.` });
-    news.push({ k: 'fichaje', to: d.buyer, x: `Fichas a ${pname(a)} de ${who(d.seller)} por ${fmt(price)}. Protegido ${Math.round(LOCK_MS / 24 / H)} días.` });
-    news.push({ k: 'fichaje', to: null, x: `${who(d.buyer)} ${how} ${pname(a)}${d.type === 'clause' ? '' : ' a ' + who(d.seller)} (${fmt(price)}).` });
+    news.push({ k: 'fichaje', to: d.buyer, a: a, x: `Fichas a ${pname(a)} de ${who(d.seller)} por ${fmt(price)}. Protegido ${Math.round(LOCK_MS / 24 / H)} días.` });
+    news.push({ k: 'fichaje', to: null, a: a, x: `${who(d.buyer)} ${how} ${pname(a)}${d.type === 'clause' ? '' : ' a ' + who(d.seller)} (${fmt(price)}).` });
     // el resto de tratos sobre el mismo jugador pendientes se anulan solos en su turno (ya no es de ese dueño)
   }
   const memberUpdates = {};

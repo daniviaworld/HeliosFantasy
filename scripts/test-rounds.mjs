@@ -1,0 +1,16 @@
+import { planRound, lineupCount } from './rounds-lib.mjs';
+let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log('FALLO', m); } else console.log('ok', m); };
+const mk = (r, d, st = 'pre') => ({ r, d, st });
+const day = (n) => new Date(Date.UTC(2026, 9, n, 18)).toISOString();
+const ms = []; for (let i = 0; i < 10; i++) ms.push(mk(10, day(23 + (i % 3))));
+const lu = (n) => ({ POR: [1], DEF: [2, 3, 4, 5, 6].slice(0, Math.max(0, Math.min(5, n - 1))), MED: Array.from({ length: Math.max(0, Math.min(5, n - 6)) }, (_, i) => 10 + i), DEL: Array.from({ length: Math.max(0, n - 11) }, (_, i) => 20 + i) });
+const members = { a: { cash: 5, lineup: lu(11) }, b: { cash: -0.5, lineup: lu(11) }, c: { cash: 3, lineup: { POR: [1], DEF: [2, null, 4], MED: [], DEL: [] } } };
+ok(lineupCount(members.a) === 11, 'cuenta 11');
+ok(planRound({ now: +new Date(day(22)), matches: ms, members, done: new Set() }) === null, 'antes de empezar no hay foto');
+const p = planRound({ now: +new Date(day(23)) + 60000, matches: ms, members, done: new Set() });
+ok(p && p.round === 10, 'foto de la jornada 10');
+ok(p.elig.a.ok === true, 'a elegible');
+ok(p.elig.b.ok === false && p.elig.b.neg, 'b con saldo negativo no puntúa');
+ok(p.elig.c.ok === false && p.elig.c.n === 3, 'c sin 11 alineados no puntúa');
+ok(planRound({ now: +new Date(day(23)) + 60000, matches: ms, members, done: new Set([10]) }) === null, 'no se repite la foto');
+console.log(fail ? 'FALLOS ' + fail : 'TODO OK'); process.exit(fail ? 1 : 0);

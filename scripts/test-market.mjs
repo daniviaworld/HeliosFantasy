@@ -56,4 +56,19 @@ ok(r4.news.filter((n) => n.to === null).every((n) => !/Paco/.test(n.x)), 'modo a
   ok(rc.memberUpdates.u2.coach === -1 || rc.memberUpdates.u2.coach === -2, 'se asigna entrenador si no tenía');
   ok(rc.memberUpdates.u1.coach === null && !rc.memberUpdates.u1.squad.includes(-1), 'el vendedor se queda sin entrenador');
 }
+// 7) endeudamiento: % del valor de la plantilla
+{
+  const mm = { u1: { name: 'A', cash: 1, squad: [1, 2, 3, 4, 5], lineup: {}, role: {}, selling: {}, rev: 0 }, u2: { name: 'B', cash: 100, squad: [6], lineup: {}, role: {}, selling: {}, rev: 0 } };
+  // valor de la plantilla de u1 = 5 × 2 = 10 → con 20 % puede gastar hasta 1 + 2 = 3
+  const s0 = { end: 0, round: 1, values: {}, listings: [10, 11] };
+  let rr = planClose({ now: 5000, state: s0, members: mm, bids: { u1: { 10: 3 } }, base, perDay: 4, rng, debtPct: 20 });
+  ok(rr.memberUpdates.u1 && rr.memberUpdates.u1.squad.includes(10) && Math.abs(rr.memberUpdates.u1.cash - (-2)) < 1e-9, 'con 20 % puede quedarse en números rojos (' + (rr.memberUpdates.u1 && rr.memberUpdates.u1.cash) + ')');
+  rr = planClose({ now: 5000, state: s0, members: mm, bids: { u1: { 10: 3.5 } }, base, perDay: 4, rng, debtPct: 20 });
+  ok(!rr.memberUpdates.u1, 'no puede pasarse del endeudamiento permitido');
+  rr = planClose({ now: 5000, state: s0, members: mm, bids: { u1: { 10: 3 } }, base, perDay: 4, rng, debtPct: 0 });
+  ok(!rr.memberUpdates.u1, 'con 0 % no se puede endeudar');
+  // el endeudamiento se gasta una sola vez entre varias pujas: 1 + 2 = 3 → solo una de dos pujas de 2,5
+  rr = planClose({ now: 5000, state: s0, members: mm, bids: { u1: { 10: 2.5, 11: 2.5 } }, base, perDay: 4, rng, debtPct: 20 });
+  ok(rr.memberUpdates.u1 && rr.memberUpdates.u1.squad.filter((a) => a === 10 || a === 11).length === 1, 'solo gana una de dos pujas que juntas superan el límite');
+}
 console.log(fail ? 'FALLOS ' + fail : 'TODO OK'); process.exit(fail ? 1 : 0);

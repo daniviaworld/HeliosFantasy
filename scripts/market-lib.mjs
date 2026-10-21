@@ -35,7 +35,7 @@ export function initialState(now, base, members, perDay, rng = Math.random) {
 
 // members: {uid:{name,cash,squad,lineup,role,selling,rev,...}}   bids: {uid:{a:amount}}
 // base: {a:{v,t,p,n}}   state: {end,round,values,listings}
-export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, rng = Math.random }) {
+export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, debtPct = 0, rng = Math.random }) {
   const values = { ...(state.values || {}) };
   const val = (a) => (values[a] != null ? values[a] : base[a] ? base[a].v : 1);
   const M = JSON.parse(JSON.stringify(members));
@@ -53,6 +53,9 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     for (const [a, ask] of Object.entries(m.selling || {}))
       if ((m.squad || []).map(String).includes(String(a))) listings.push({ a: Number(a), seller: uid, ask });
 
+  // Endeudamiento permitido: % del valor de la plantilla (lo decide el admin de la liga).
+  const teamValue = (uid) => (M[uid].squad || []).reduce((s, a) => s + val(a), 0);
+  const avail = (uid) => M[uid].cash + (debtPct > 0 ? (debtPct / 100) * teamValue(uid) : 0);
   const sold = [];
   for (const L of shuffle(listings, rng)) {
     const a = L.a, cpu = L.seller == null, v = val(a), min = cpu ? v : L.ask;
@@ -72,11 +75,11 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
       }
     }
     if (!cands.length) continue;
-    const win = cands.find((c) => M[c.uid].cash + 1e-9 >= c.amt);
+    const win = cands.find((c) => avail(c.uid) + 1e-9 >= c.amt);
     for (const c of cands) {
       if (c === win) continue;
-      if (M[c.uid].cash + 1e-9 < c.amt) news.push({ k: 'mercado', to: c.uid, x: `Tu puja por ${pname(a)} se anuló por falta de saldo.` });
-      else if (win) news.push({ k: 'mercado', to: c.uid, x: `Perdiste la puja por ${pname(a)}: ${who(win.uid)} pagó ${fmt(win.amt)}.` });
+      if (avail(c.uid) + 1e-9 < c.amt) news.push({ k: 'mercado', to: c.uid, a: a, x: `Tu puja por ${pname(a)} se anuló por falta de saldo.` });
+      else if (win) news.push({ k: 'mercado', to: c.uid, a: a, x: `Perdiste la puja por ${pname(a)}: ${who(win.uid)} pagó ${fmt(win.amt)}.` });
     }
     if (!win) continue;
     const buyer = M[win.uid];
@@ -98,10 +101,10 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
       if (s.cap != null && String(s.cap) === String(a)) s.cap = null;
       s.saved = false;
       changed.add(L.seller);
-      news.push({ k: 'fichaje', to: L.seller, x: `Vendes a ${pname(a)} a ${who(win.uid)} por ${fmt(win.amt)}.` });
+      news.push({ k: 'fichaje', to: L.seller, a: a, x: `Vendes a ${pname(a)} a ${who(win.uid)} por ${fmt(win.amt)}.` });
     }
-    news.push({ k: 'fichaje', to: win.uid, x: `Fichas a ${pname(a)}${cpu ? '' : ' de ' + who(L.seller)} por ${fmt(win.amt)}.` });
-    news.push({ k: 'fichaje', to: null, x: `${who(win.uid)} ficha a ${pname(a)}${cpu ? '' : ' de ' + who(L.seller)} por ${fmt(win.amt)}.` });
+    news.push({ k: 'fichaje', to: win.uid, a: a, x: `Fichas a ${pname(a)}${cpu ? '' : ' de ' + who(L.seller)} por ${fmt(win.amt)}.` });
+    news.push({ k: 'fichaje', to: null, a: a, x: `${who(win.uid)} ficha a ${pname(a)}${cpu ? '' : ' de ' + who(L.seller)} por ${fmt(win.amt)}.` });
     sold.push({ a, uid: win.uid, amt: win.amt });
   }
 
