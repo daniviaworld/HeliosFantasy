@@ -3,7 +3,7 @@
 //   points/season     -> puntos por jugador y jornada, y del entrenador
 // Variables: FIREBASE_SERVICE_ACCOUNT (obligatoria salvo DRY_RUN=1), FULL=1 (rescanear toda la temporada), SEASON_START (AAAA-MM-DD)
 import fs from 'node:fs';
-import { parseScoreboard, assignRounds, currentRound, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints } from './results-lib.mjs';
+import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -64,11 +64,31 @@ if (failedDays.length) {
   process.exit(1);
 }
 const matches = assignRounds([...all.values()]);
+// Ancla del número de jornada: ESPN indica cuántos partidos ha jugado cada equipo (mediana = última jornada completa).
+let offset = 0;
+{
+  const Lc = lastCompleteRound(matches);
+  if (!FULL && prevFx && typeof prevFx.offset === 'number') { offset = prevFx.offset; console.log(`Desfase de jornada guardado: ${offset}`); }
+  else {
+    const st = await get('https://site.api.espn.com/apis/v2/sports/soccer/esp.1/standings');
+    const med = st ? medianPlayed(st) : null;
+    if (med == null) console.warn('AVISO: no pude leer la clasificación de ESPN; se usa la numeración calculada.');
+    else {
+      offset = med - Lc;
+      console.log(`Clasificación ESPN: mediana de partidos jugados = ${med}; última jornada completa calculada = ${Lc}; desfase = ${offset}`);
+      if (Math.abs(offset) > 6) { console.warn('AVISO: desfase demasiado grande, no se aplica.'); offset = 0; }
+    }
+  }
+  shiftRounds(matches, offset);
+}
 const round = currentRound(matches);
 console.log(`Calendario: ${matches.length} partidos (${calls} consultas) · jornada actual: ${round}`);
 {
   const per = {}; for (const m of matches) per[m.r] = (per[m.r] || 0) + 1;
   console.log('Partidos por jornada:', Object.keys(per).map((r) => `J${r}:${per[r]}`).join(' '));
+  const rr = {};
+  for (const m of matches) { const x = (rr[m.r] = rr[m.r] || { a: m.d, b: m.d, n: 0, p: 0 }); if (m.d < x.a) x.a = m.d; if (m.d > x.b) x.b = m.d; x.n++; if (m.st === 'post') x.p++; }
+  for (const r of Object.keys(rr).map(Number).sort((a, b) => a - b)) console.log(`  J${r}: ${rr[r].a.slice(0, 10)} → ${rr[r].b.slice(0, 10)} · ${rr[r].p}/${rr[r].n} jugados`);
   const odd = Object.keys(per).filter((r) => +r < round && per[r] !== Math.floor(cat.teams.length / 2));
   if (odd.length) console.warn(`AVISO: jornadas con un número raro de partidos (esperado ${Math.floor(cat.teams.length / 2)}): ${odd.map((r) => 'J' + r + '=' + per[r]).join(', ')}`);
 }
@@ -105,6 +125,6 @@ const compact = matches.map((m) => ({ id: m.id, d: m.d, h: teamCode(m.h.n), a: t
 const size = Buffer.byteLength(JSON.stringify(season)) + Buffer.byteLength(JSON.stringify(compact));
 if (size > 900 * 1024) { console.error('Datos demasiado grandes'); process.exit(1); }
 const ts = admin.firestore.FieldValue.serverTimestamp();
-await db.doc('catalog/fixtures').set({ season: cat.season, round, matches: compact, updatedAt: ts });
+await db.doc('catalog/fixtures').set({ season: cat.season, round, offset, matches: compact, updatedAt: ts });
 if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, updatedAt: ts });
 console.log('Guardado en Firestore.');

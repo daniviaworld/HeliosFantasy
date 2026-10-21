@@ -93,3 +93,15 @@ console.log('Todas las pruebas de resultados pasan.');
   assert.equal(currentRound(w), 3, 'el aplazado no cuenta como jornada actual');
 }
 console.log('rounds ok');
+// ancla por clasificación
+{
+  const { medianPlayed, shiftRounds, lastCompleteRound } = await import('./results-lib.mjs');
+  const entries = Array.from({ length: 20 }, (_, i) => ({ stats: [{ name: 'gamesPlayed', value: i === 3 ? 8 : 9 }] }));
+  assert.equal(medianPlayed({ children: [{ standings: { entries } }] }), 9);
+  assert.equal(medianPlayed({}), null);
+  const ms = [{ r: 12, d: '2026-10-17T10:00Z', st: 'post' }, { r: 13, d: '2026-10-24T10:00Z', st: 'pre' }];
+  assert.equal(lastCompleteRound(ms), 12);
+  shiftRounds(ms, 9 - 12);
+  assert.deepEqual(ms.map((m) => m.r), [9, 10]);
+}
+console.log('anchor ok');

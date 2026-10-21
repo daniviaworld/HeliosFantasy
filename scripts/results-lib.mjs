@@ -95,6 +95,35 @@ export function coreMatches(matches) {
   for (const m of matches) { const t = +new Date(m.d); if (first[m.r] == null || t < first[m.r]) first[m.r] = t; }
   return matches.filter((m) => +new Date(m.d) - first[m.r] <= 4 * 86400000);
 }
+// Última jornada completa (todos sus partidos "de la jornada" terminados).
+export function lastCompleteRound(matches) {
+  const core = coreMatches(matches), by = {};
+  for (const m of core) { const b = (by[m.r] = by[m.r] || { n: 0, d: 0 }); b.n++; if (m.st === 'post') b.d++; }
+  const done = Object.keys(by).map(Number).filter((r) => by[r].d === by[r].n).sort((a, b) => a - b);
+  return done.length ? done[done.length - 1] : 0;
+}
+// Partidos jugados por equipo según la clasificación de ESPN -> mediana (= última jornada completa real).
+export function medianPlayed(standings) {
+  const gp = [];
+  const walk = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o.entries)) for (const e of o.entries) {
+      const st = (e.stats || []).find((x) => x.name === 'gamesPlayed' || x.abbreviation === 'GP');
+      if (st && Number.isFinite(+st.value)) gp.push(+st.value);
+    }
+    for (const k of Object.keys(o)) if (o[k] && typeof o[k] === 'object') walk(o[k]);
+  };
+  walk(standings);
+  if (gp.length < 10) return null;
+  gp.sort((a, b) => a - b);
+  return gp[Math.floor(gp.length / 2)];
+}
+export function shiftRounds(matches, off) {
+  if (!off) return matches;
+  if (Math.min(...matches.map((m) => m.r)) + off < 1) return matches;
+  for (const m of matches) m.r += off;
+  return matches;
+}
 export function currentRound(matches) {
   const open = coreMatches(matches).filter((m) => m.st !== 'post');
   if (open.length) return Math.min(...open.map((m) => m.r));
