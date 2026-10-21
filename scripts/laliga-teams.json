@@ -1,22 +1,168 @@
 [
-  {"label": "Barcelona",          "names": ["Barcelona", "FC Barcelona"]},
-  {"label": "Real Madrid",        "names": ["Real Madrid"]},
-  {"label": "Villarreal",         "names": ["Villarreal", "Villarreal CF"]},
-  {"label": "Atlético de Madrid", "names": ["Atletico Madrid", "Atletico de Madrid", "Atlético Madrid"]},
-  {"label": "Real Betis",         "names": ["Real Betis", "Betis"]},
-  {"label": "Celta",              "names": ["Celta Vigo", "Celta de Vigo", "Celta"]},
-  {"label": "Real Sociedad",      "names": ["Real Sociedad"]},
-  {"label": "Getafe",             "names": ["Getafe", "Getafe CF"]},
-  {"label": "Athletic Club",      "names": ["Athletic Club", "Athletic Bilbao"]},
-  {"label": "Valencia",           "names": ["Valencia", "Valencia CF"]},
-  {"label": "Sevilla",            "names": ["Sevilla", "Sevilla FC"]},
-  {"label": "Rayo Vallecano",     "names": ["Rayo Vallecano"]},
-  {"label": "Osasuna",            "names": ["Osasuna", "CA Osasuna"]},
-  {"label": "Espanyol",           "names": ["Espanyol", "RCD Espanyol"]},
-  {"label": "Alavés",             "names": ["Alaves", "Deportivo Alaves", "Alavés"]},
-  {"label": "Levante",            "names": ["Levante", "Levante UD"]},
-  {"label": "Elche",              "names": ["Elche", "Elche CF"]},
-  {"label": "Racing Santander",   "names": ["Racing Santander", "Racing de Santander", "Real Racing Club", "Racing Club Santander"]},
-  {"label": "Deportivo",          "names": ["Deportivo La Coruna", "Deportivo La Coruña", "RC Deportivo", "Deportivo de La Coruña", "Deportivo"]},
-  {"label": "Málaga",             "names": ["Malaga", "Málaga", "Malaga CF", "Málaga CF"]}
+ {
+  "label": "Barcelona",
+  "names": [
+   "Barcelona",
+   "FC Barcelona"
+  ]
+ },
+ {
+  "label": "Real Madrid",
+  "names": [
+   "Real Madrid",
+   "Real Madrid CF"
+  ]
+ },
+ {
+  "label": "Villarreal",
+  "names": [
+   "Villarreal",
+   "Villarreal CF"
+  ]
+ },
+ {
+  "label": "Atlético de Madrid",
+  "names": [
+   "Atletico Madrid",
+   "Atletico de Madrid",
+   "Atlético Madrid",
+   "Club Atlético de Madrid",
+   "Club Atletico de Madrid",
+   "Atlético de Madrid"
+  ]
+ },
+ {
+  "label": "Real Betis",
+  "names": [
+   "Real Betis",
+   "Betis",
+   "Real Betis Balompié",
+   "Real Betis Balompie"
+  ]
+ },
+ {
+  "label": "Celta",
+  "names": [
+   "Celta Vigo",
+   "Celta de Vigo",
+   "Celta",
+   "RC Celta de Vigo",
+   "RC Celta"
+  ]
+ },
+ {
+  "label": "Real Sociedad",
+  "names": [
+   "Real Sociedad",
+   "Real Sociedad de Fútbol",
+   "Real Sociedad de Futbol"
+  ]
+ },
+ {
+  "label": "Getafe",
+  "names": [
+   "Getafe",
+   "Getafe CF"
+  ]
+ },
+ {
+  "label": "Athletic Club",
+  "names": [
+   "Athletic Club",
+   "Athletic Bilbao",
+   "Athletic Club de Bilbao"
+  ]
+ },
+ {
+  "label": "Valencia",
+  "names": [
+   "Valencia",
+   "Valencia CF"
+  ]
+ },
+ {
+  "label": "Sevilla",
+  "names": [
+   "Sevilla",
+   "Sevilla FC"
+  ]
+ },
+ {
+  "label": "Rayo Vallecano",
+  "names": [
+   "Rayo Vallecano",
+   "Rayo Vallecano de Madrid"
+  ]
+ },
+ {
+  "label": "Osasuna",
+  "names": [
+   "Osasuna",
+   "CA Osasuna"
+  ]
+ },
+ {
+  "label": "Espanyol",
+  "names": [
+   "Espanyol",
+   "RCD Espanyol",
+   "RCD Espanyol de Barcelona"
+  ]
+ },
+ {
+  "label": "Alavés",
+  "names": [
+   "Alaves",
+   "Deportivo Alaves",
+   "Alavés",
+   "Deportivo Alavés"
+  ]
+ },
+ {
+  "label": "Levante",
+  "names": [
+   "Levante",
+   "Levante UD"
+  ]
+ },
+ {
+  "label": "Elche",
+  "names": [
+   "Elche",
+   "Elche CF"
+  ]
+ },
+ {
+  "label": "Racing Santander",
+  "names": [
+   "Racing Santander",
+   "Racing de Santander",
+   "Real Racing Club",
+   "Racing Club Santander",
+   "Real Racing Club de Santander",
+   "Racing Club de Santander"
+  ]
+ },
+ {
+  "label": "Deportivo",
+  "names": [
+   "Deportivo La Coruna",
+   "Deportivo La Coruña",
+   "RC Deportivo",
+   "Deportivo de La Coruña",
+   "Deportivo",
+   "RC Deportivo de La Coruña",
+   "RC Deportivo La Coruña",
+   "Real Club Deportivo de La Coruña"
+  ]
+ },
+ {
+  "label": "Málaga",
+  "names": [
+   "Malaga",
+   "Málaga",
+   "Malaga CF",
+   "Málaga CF"
+  ]
+ }
 ]

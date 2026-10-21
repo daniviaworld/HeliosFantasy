@@ -99,9 +99,25 @@ console.log('rounds ok');
   const entries = Array.from({ length: 20 }, (_, i) => ({ stats: [{ name: 'gamesPlayed', value: i === 3 ? 8 : 9 }] }));
   assert.equal(medianPlayed({ children: [{ standings: { entries } }] }), 9);
   assert.equal(medianPlayed({}), null);
-  const ms = [{ r: 12, d: '2026-10-17T10:00Z', st: 'post' }, { r: 13, d: '2026-10-24T10:00Z', st: 'pre' }];
-  assert.equal(lastCompleteRound(ms), 12);
+  const ms = Array.from({ length: 6 }, () => ({ r: 12, d: '2026-10-17T10:00Z', st: 'post' })).concat([{ r: 13, d: '2026-10-24T10:00Z', st: 'pre' }]);
+  assert.equal(lastCompleteRound(ms, +new Date('2026-10-20')), 12);
   shiftRounds(ms, 9 - 12);
-  assert.deepEqual(ms.map((m) => m.r), [9, 10]);
+  assert.deepEqual(ms.map((m) => m.r), [9, 9, 9, 9, 9, 9, 10]);
 }
 console.log('anchor ok');
+
+// aplazados: un partido pendiente con fecha pasada no bloquea la jornada actual
+{
+  const { isLate, lastCompleteRound } = await import('./results-lib.mjs');
+  const now = +new Date('2026-10-21T12:00Z');
+  const mk = (id, r, d, st) => ({ id, r, d, st, h: { id: id + 'h' }, a: { id: id + 'a' } });
+  const rs = [];
+  for (let i = 0; i < 9; i++) rs.push(mk('a' + i, 8, '2026-10-10T18:00Z', 'post'));
+  rs.push(mk('p', 8, '2026-10-10T18:00Z', 'pre'));           // aplazado que conserva su fecha antigua
+  for (let i = 0; i < 10; i++) rs.push(mk('b' + i, 9, '2026-10-17T18:00Z', 'post'));
+  for (let i = 0; i < 10; i++) rs.push(mk('c' + i, 10, '2026-10-24T18:00Z', 'pre'));
+  assert.equal(isLate(rs.find((m) => m.id === 'p'), now), true);
+  assert.equal(currentRound(rs, now), 10);
+  assert.equal(lastCompleteRound(rs, now), 9);
+}
+console.log('late ok');

@@ -48,7 +48,7 @@ export function parseScoreboard(json) {
       id: String(e.id), d: e.date,
       h: { id: String(home.team.id), n: home.team.displayName, s: +home.score || 0 },
       a: { id: String(away.team.id), n: away.team.displayName, s: +away.score || 0 },
-      st: t.completed ? 'post' : (t.state === 'in' ? 'in' : 'pre'),
+      st: t.completed ? 'post' : (/POSTPONED|CANCEL|SUSPENDED|ABANDON/i.test(t.name || '') ? 'ppd' : (t.state === 'in' ? 'in' : 'pre')),
     });
   }
   return out;
@@ -89,17 +89,21 @@ export function assignRounds(matches, minFull = 6) {
   all.forEach((R, i) => R.ms.forEach((m) => { m.r = i + 1; }));
   return sorted;
 }
-// Partidos "de la jornada" (no aplazados): los que caen a <=4 días del primero de su jornada.
-export function coreMatches(matches) {
-  const first = {};
-  for (const m of matches) { const t = +new Date(m.d); if (first[m.r] == null || t < first[m.r]) first[m.r] = t; }
-  return matches.filter((m) => +new Date(m.d) - first[m.r] <= 4 * 86400000);
+// Un partido pendiente cuya hora ya pasó hace horas, o marcado como aplazado, se considera aplazado.
+export function isLate(m, now = Date.now()) {
+  return m.st === 'ppd' || (m.st === 'pre' && +new Date(m.d) < now - 6 * 3600e3);
 }
-// Última jornada completa (todos sus partidos "de la jornada" terminados).
-export function lastCompleteRound(matches) {
-  const core = coreMatches(matches), by = {};
+// Partidos "de la jornada" (no aplazados): a <=4 días del primero de su jornada y no aplazados.
+export function coreMatches(matches, now = Date.now()) {
+  const first = {};
+  for (const m of matches) { if (isLate(m, now)) continue; const t = +new Date(m.d); if (first[m.r] == null || t < first[m.r]) first[m.r] = t; }
+  return matches.filter((m) => !isLate(m, now) && first[m.r] != null && +new Date(m.d) - first[m.r] <= 4 * 86400000);
+}
+// Última jornada completa: todos sus partidos "de la jornada" terminados (solo cuentan jornadas con >=6 partidos).
+export function lastCompleteRound(matches, now = Date.now()) {
+  const core = coreMatches(matches, now), by = {};
   for (const m of core) { const b = (by[m.r] = by[m.r] || { n: 0, d: 0 }); b.n++; if (m.st === 'post') b.d++; }
-  const done = Object.keys(by).map(Number).filter((r) => by[r].d === by[r].n).sort((a, b) => a - b);
+  const done = Object.keys(by).map(Number).filter((r) => by[r].n >= 6 && by[r].d === by[r].n).sort((a, b) => a - b);
   return done.length ? done[done.length - 1] : 0;
 }
 // Partidos jugados por equipo según la clasificación de ESPN -> mediana (= última jornada completa real).
@@ -124,8 +128,8 @@ export function shiftRounds(matches, off) {
   for (const m of matches) m.r += off;
   return matches;
 }
-export function currentRound(matches) {
-  const open = coreMatches(matches).filter((m) => m.st !== 'post');
+export function currentRound(matches, now = Date.now()) {
+  const open = coreMatches(matches, now).filter((m) => m.st !== 'post');
   if (open.length) return Math.min(...open.map((m) => m.r));
   return matches.length ? Math.max(...matches.map((m) => m.r)) : 1;
 }

@@ -3,6 +3,7 @@
 //   points/season     -> puntos por jugador y jornada, y del entrenador
 // Variables: FIREBASE_SERVICE_ACCOUNT (obligatoria salvo DRY_RUN=1), FULL=1 (rescanear toda la temporada), SEASON_START (AAAA-MM-DD)
 import fs from 'node:fs';
+import { norm } from './lib.mjs';
 import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
@@ -64,9 +65,49 @@ if (failedDays.length) {
   process.exit(1);
 }
 const matches = assignRounds([...all.values()]);
-// Ancla del número de jornada: ESPN indica cuántos partidos ha jugado cada equipo (mediana = última jornada completa).
-let offset = 0;
+
+// A) Jornada oficial desde football-data.org (si hay clave): cada pareja local-visitante juega una sola vez por temporada.
+async function fdRounds() {
+  const key = process.env.FOOTBALL_DATA_KEY;
+  if (!key) return null;
+  try {
+    const r = await fetch('https://api.football-data.org/v4/competitions/PD/matches', { headers: { 'X-Auth-Token': key } });
+    if (!r.ok) { console.warn(`AVISO: football-data.org respondió ${r.status}`); return null; }
+    const j = await r.json();
+    const aliases = wanted.map((w) => ({ code: teamCode(w.label), names: w.names.concat([w.label]).map(norm) }));
+    const fdCode = (t) => {
+      if (!t) return null;
+      for (const n of [t.name, t.shortName]) { const c = n && teamCode(n); if (c) return c; }
+      const nn = norm(t.name || ''); if (!nn) return null;
+      const hit = aliases.find((a) => a.code && a.names.some((x) => x.length >= 5 && (nn.includes(x) || x.includes(nn))));
+      return hit ? hit.code : null;
+    };
+    const map = {}, bad = new Set();
+    for (const x of j.matches || []) {
+      const h = fdCode(x.homeTeam), a = fdCode(x.awayTeam);
+      if (!h || !a) { if (!h) bad.add(x.homeTeam && x.homeTeam.name); if (!a) bad.add(x.awayTeam && x.awayTeam.name); continue; }
+      map[h + '|' + a] = x.matchday;
+    }
+    if (bad.size) console.warn('AVISO: equipos de football-data.org sin emparejar:', [...bad].join(', '));
+    return map;
+  } catch (e) { console.warn('AVISO: no pude leer football-data.org:', e.message); return null; }
+}
+let usedFD = false;
 {
+  const map = await fdRounds();
+  if (map) {
+    let hit = 0;
+    for (const m of matches) if (map[teamCode(m.h.n) + '|' + teamCode(m.a.n)] != null) hit++;
+    if (hit >= matches.length * 0.95) {
+      for (const m of matches) { const v = map[teamCode(m.h.n) + '|' + teamCode(m.a.n)]; if (v != null) m.r = v; }
+      usedFD = true;
+      console.log(`Jornadas oficiales de football-data.org aplicadas a ${hit} de ${matches.length} partidos.`);
+    } else console.warn(`AVISO: solo ${hit} de ${matches.length} partidos emparejados con football-data.org; se usa el cálculo propio.`);
+  }
+}
+// B) Si no hay jornadas oficiales: ancla del número de jornada: ESPN indica cuántos partidos ha jugado cada equipo (mediana = última jornada completa).
+let offset = 0;
+if (!usedFD) {
   const Lc = lastCompleteRound(matches);
   if (!FULL && prevFx && typeof prevFx.offset === 'number') { offset = prevFx.offset; console.log(`Desfase de jornada guardado: ${offset}`); }
   else {
@@ -125,6 +166,6 @@ const compact = matches.map((m) => ({ id: m.id, d: m.d, h: teamCode(m.h.n), a: t
 const size = Buffer.byteLength(JSON.stringify(season)) + Buffer.byteLength(JSON.stringify(compact));
 if (size > 900 * 1024) { console.error('Datos demasiado grandes'); process.exit(1); }
 const ts = admin.firestore.FieldValue.serverTimestamp();
-await db.doc('catalog/fixtures').set({ season: cat.season, round, offset, matches: compact, updatedAt: ts });
+await db.doc('catalog/fixtures').set({ season: cat.season, round, offset, src: usedFD ? 'fd' : 'espn', matches: compact, updatedAt: ts });
 if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, updatedAt: ts });
 console.log('Guardado en Firestore.');
