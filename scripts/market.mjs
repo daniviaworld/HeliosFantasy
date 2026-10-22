@@ -1,6 +1,6 @@
 // Cierra los mercados de todas las ligas cuya hora de cierre ya pasó (cada 24 h).
 // Se ejecuta desde GitHub Actions cada pocos minutos. Usa la cuenta de servicio de Firebase.
-import { planClose, initialState } from './market-lib.mjs';
+import { planClose, initialState, newCpuListings } from './market-lib.mjs';
 import { planRound } from './rounds-lib.mjs';
 
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -19,7 +19,7 @@ const leagues = await db.collection('leagues').get();
 let closed = 0, created = 0;
 for (const L of leagues.docs) {
   try {
-    const ref = L.ref, data = L.data(), perDay = (data.rules && data.rules.perDay) || 8, anon = !!(data.rules && data.rules.anon);
+    const ref = L.ref, data = L.data(), perDay = Math.max(18, (data.rules && data.rules.perDay) || 18), anon = !!(data.rules && data.rules.anon);
     const stRef = ref.collection('market').doc('state');
     const stSnap = await stRef.get();
     const memSnap = await ref.collection('members').get();
@@ -30,7 +30,15 @@ for (const L of leagues.docs) {
       created++; console.log('Mercado creado en', data.name); continue;
     }
     const st = stSnap.data();
-    if (st.end > now) continue;
+    if (st.end > now) {
+      // completa el mercado abierto hasta el mínimo de jugadores (p. ej. ligas creadas con 8)
+      const cur = st.listings || [];
+      if (cur.length < perDay) {
+        const extra = newCpuListings(base, members, perDay - cur.length, Math.random, cur);
+        if (extra.length) { await stRef.update({ listings: [...cur, ...extra] }); console.log('Mercado ampliado en', data.name, '+' + extra.length); }
+      }
+      continue;
+    }
     const bidSnap = await ref.collection('bids').get();
     const bids = {};
     bidSnap.forEach((d) => { bids[d.id] = (d.data() || {}).bids || {}; });
