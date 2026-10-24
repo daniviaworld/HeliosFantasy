@@ -161,6 +161,20 @@ for (const m of matches) {
 }
 console.log(`\nPartidos nuevos procesados: ${processed}`);
 
+// 2b) puntos PROVISIONALES de los partidos en juego (no se suman a la temporada; la app los muestra "en directo")
+const liveM = {};
+for (const m of matches) {
+  if (m.st !== 'in') continue;
+  const sum = await get(`${E}/summary?event=${m.id}`); await sleep(200);
+  if (!sum) { console.warn('Sin resumen en directo para', m.id); continue; }
+  const res = scoreMatch({ match: m, summary: sum, teamCode, matcher });
+  const pts = finalizePoints(res, byApi);
+  const coach = {};
+  for (const [side, o] of [[m.h, m.a], [m.a, m.h]]) { const code = teamCode(side.n); if (code) coach[code] = coachPoints(side.s, o.s); }
+  liveM[m.id] = { r: m.r, h: teamCode(m.h.n), a: teamCode(m.a.n), hs: m.h.s, as: m.a.s, pl: pts, coach };
+  console.log(`EN DIRECTO J${m.r} · ${m.h.n} ${m.h.s}-${m.a.s} ${m.a.n} (${Object.keys(pts).length} jugadores con puntos provisionales)`);
+}
+
 if (DRY) { console.log('DRY_RUN: no se escribe nada en Firestore.'); process.exit(0); }
 const compact = matches.map((m) => ({ id: m.id, d: m.d, h: teamCode(m.h.n), a: teamCode(m.a.n), hi: m.h.id, ai: m.a.id, hn: m.h.n, an: m.a.n, hs: m.h.s, as: m.a.s, st: m.st, r: m.r }));
 const size = Buffer.byteLength(JSON.stringify(season)) + Buffer.byteLength(JSON.stringify(compact));
@@ -168,4 +182,9 @@ if (size > 900 * 1024) { console.error('Datos demasiado grandes'); process.exit(
 const ts = admin.firestore.FieldValue.serverTimestamp();
 await db.doc('catalog/fixtures').set({ season: cat.season, round, offset, src: usedFD ? 'fd' : 'espn', matches: compact, updatedAt: ts });
 if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, updatedAt: ts });
+{
+  const lref = db.doc('points/live'), prev = await lref.get();
+  const had = prev.exists && Object.keys((prev.data() || {}).m || {}).length > 0;
+  if (Object.keys(liveM).length || had) { await lref.set({ m: liveM, updatedAt: ts }); console.log('Puntos en directo guardados:', Object.keys(liveM).length, 'partidos.'); }
+}
 console.log('Guardado en Firestore.');
