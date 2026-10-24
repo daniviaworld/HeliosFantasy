@@ -66,7 +66,7 @@ try {
   let snaps = 0;
   for (const L of leagues.docs) {
     const rs = await L.ref.collection('rounds').get();
-    const done = new Set(); rs.forEach((d) => done.add(+d.id));
+    const done = new Map(); rs.forEach((d) => done.set(+d.id, !!(d.data().elig && Object.values(d.data().elig).some((e) => e && e.lu))));
     const memSnap = await L.ref.collection('members').get();
     const members = {}; memSnap.forEach((d) => { members[d.id] = d.data(); });
     const p = planRound({ now, matches, members, done });
