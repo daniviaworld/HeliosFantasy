@@ -216,7 +216,7 @@ const size = Buffer.byteLength(JSON.stringify(season)) + Buffer.byteLength(JSON.
 if (size > 900 * 1024) { console.error('Datos demasiado grandes'); process.exit(1); }
 const ts = admin.firestore.FieldValue.serverTimestamp();
 await db.doc('catalog/fixtures').set({ season: cat.season, round, offset, src: usedFD ? 'fd' : 'espn', matches: compact, updatedAt: ts });
-for (const [r, sd] of Object.entries(stR)) if (sd.dirty) await db.doc('points/s' + r).set({ r: +r, pl: sd.pl, updatedAt: ts });
+{ let n = 0; for (const [r, sd] of Object.entries(stR)) if (sd.dirty) { await db.doc('points/s' + r).set({ r: +r, pl: sd.pl, updatedAt: ts }); n++; } console.log('Desglose de estadísticas guardado en', n, 'jornadas.'); }
 if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, updatedAt: ts });
 if (umChanged || FULL) await uRef.set({ items: umItems.slice(-200), updatedAt: ts });
 {
