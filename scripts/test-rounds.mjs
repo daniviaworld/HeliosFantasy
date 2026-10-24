@@ -1,4 +1,4 @@
-import { planRound, lineupCount, planSettle, doneRounds, planBonus } from './rounds-lib.mjs';
+import { planRound, lineupCount, planSettle, doneRounds, planBonus, idealXI, planIdeal, payIdeal } from './rounds-lib.mjs';
 let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log('FALLO', m); } else console.log('ok', m); };
 const mk = (r, d, st = 'pre') => ({ r, d, st });
 const day = (n) => new Date(Date.UTC(2026, 9, n, 18)).toISOString();
@@ -46,5 +46,29 @@ ok(planRound({ now: +new Date(day(23)) + 60000, matches: ms, members, done: new 
   ok(!o.c, 'antes de entrar no cobra');
   ok(!o.d, 'una jornada sin terminar no se paga');
   ok(Object.keys(planBonus({ matches: msDone, now: +new Date(day(25)), members: mem, bonus: 0 })).length === 0, 'sin prima no se paga nada');
+}
+// 11 ideal
+{
+  const base = {}, pl = {}; let id = 1;
+  const add = (pos, n, v0) => { for (let i = 0; i < n; i++, id++) { base[id] = { p: pos }; pl[id] = { j: { 9: v0 - i } }; } };
+  add('POR', 3, 10); add('DEF', 7, 9); add('MED', 7, 8); add('DEL', 5, 7);
+  const x = idealXI({ pl }, base, 9);
+  ok(x && x.ids.length === 11, 'once de 11');
+  ok(x.ids[0] === 1 && x.f && x.pts > 0, 'portero mejor y formación ' + x.f);
+  const same = [...x.ids].sort((a, b) => a - b).join();
+  ok(idealXI({ pl }, base, 8) === null, 'sin datos de la jornada: sin once');
+  const msDone = []; for (let i = 0; i < 10; i++) msDone.push({ r: 9, d: day(10), st: 'post' });
+  const pi = planIdeal({ matches: msDone, now: +new Date(day(25)), season: { pl }, base });
+  ok(pi[9] && pi[9].ids.length === 11, 'planIdeal calcula jornada 9');
+  ok(Object.keys(planIdeal({ matches: msDone, now: +new Date(day(25)), season: { pl }, base, have: { 9: pi[9] } })).length === 0, 'no recalcula');
+  const ideal = { 9: pi[9] };
+  const a = x.ids[0], b = x.ids[1];
+  const mem = { u: { r0: 9, cash: 1, squad: [a, b, 999] }, v: { r0: 10, squad: [a] }, w: { r0: 9, cash: 0, squad: [a], ip: { 9: 1 } }, z: { r0: 9, cash: 0, squad: [999] } };
+  const o = payIdeal({ members: mem, ideal, per: 0.5 });
+  ok(o.u && o.u.credit === 1 && o.u.cash === 2 && o.u.ip[9] === 2, '2 jugadores × 0,5 M');
+  ok(!o.v && !o.w, 'antes de entrar / ya pagada: nada');
+  ok(o.z && o.z.credit === 0 && o.z.ip[9] === 0, 'sin jugadores: 0');
+  const o0 = payIdeal({ members: mem, ideal, per: 0 });
+  ok(o0.u.credit === 0 && o0.u.ip[9] === 0, 'prima desactivada: no cobra y no queda pendiente');
 }
 console.log(fail ? 'FALLOS ' + fail : 'TODO OK'); process.exit(fail ? 1 : 0);

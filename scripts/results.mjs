@@ -4,7 +4,7 @@
 // Variables: FIREBASE_SERVICE_ACCOUNT (obligatoria salvo DRY_RUN=1), FULL=1 (rescanear toda la temporada), SEASON_START (AAAA-MM-DD)
 import fs from 'node:fs';
 import { norm } from './lib.mjs';
-import { planSettle, planBonus } from './rounds-lib.mjs';
+import { planSettle, planBonus, planIdeal, payIdeal } from './rounds-lib.mjs';
 import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
@@ -190,6 +190,15 @@ if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, u
 }
 console.log('Guardado en Firestore.');
 
+// 2c) 11 ideal de cada jornada terminada (se guarda en points/ideal; las ligas cobran por él en el paso 3)
+let ideal = {};
+try {
+  const iref = db.doc('points/ideal'), is = await iref.get();
+  ideal = is.exists ? ((is.data() || {}).r || {}) : {};
+  const newI = planIdeal({ matches: compact, now: +now, season, base: byApi, have: ideal });
+  if (Object.keys(newI).length) { ideal = { ...ideal, ...newI }; await iref.set({ r: ideal, updatedAt: ts }); console.log('11 ideal nuevos:', Object.keys(newI).join(', ')); }
+} catch (e) { console.error('Error en el 11 ideal:', e.message); }
+
 // 3) cierre de jornadas en el servidor: rellena los puntos de los mánagers que aún no han abierto la app
 try {
   const leagues = await db.collection('leagues').get();
@@ -204,12 +213,17 @@ try {
     for (const [uid, m] of Object.entries(members)) merged[uid] = { ...m, rp: out[uid] ? out[uid].rp : (m.rp || {}) };
     const bon = planBonus({ matches: compact, members: merged, bonus: +rules.bonus || 0 });
     const fmtM = (x) => x.toFixed(2).replace('.', ',') + ' M';
-    for (const uid of new Set([...Object.keys(out), ...Object.keys(bon)])) {
-      const o = out[uid], b = bon[uid], upd = {};
+    const withB = {}; for (const [uid, m] of Object.entries(merged)) withB[uid] = bon[uid] ? { ...m, cash: bon[uid].cash } : m;
+    const idl = payIdeal({ members: withB, ideal, per: +rules.ideal || 0 });
+    for (const uid of new Set([...Object.keys(out), ...Object.keys(bon), ...Object.keys(idl)])) {
+      const o = out[uid], b = bon[uid], iq = idl[uid], upd = {};
       if (o) { upd.tot = o.tot; upd.j = o.j; for (const r of o.added) upd['rp.' + r] = o.rp[r]; }
-      if (b) { upd.cash = b.cash; upd.bp = b.bp; upd.rev = (members[uid].rev || 0) + 1; }
+      if (b) { upd.cash = b.cash; upd.bp = b.bp; }
+      if (iq) { upd.cash = iq.cash; upd.ip = iq.ip; }
+      if (b || iq) upd.rev = (members[uid].rev || 0) + 1;
       await L.ref.collection('members').doc(uid).update(upd);
       if (b) await L.ref.collection('news').doc().set({ ts: Date.now(), k: 'primas', to: uid, a: null, x: `Prima de la jornada ${b.rounds.join(', ')}: ${fmtM(b.credit)}.` });
+      if (iq && iq.credit > 0) await L.ref.collection('news').doc().set({ ts: Date.now(), k: 'primas', to: uid, a: null, x: `11 ideal de la jornada ${iq.rounds.map((x) => x.r).join(', ')}: ${iq.n} jugador${iq.n === 1 ? '' : 'es'} → ${fmtM(iq.credit)}.` });
       filled++; console.log(`${members[uid].name} en ${L.data().name}:`, o ? `jornadas ${o.added.join(', ')} cerradas (total ${o.tot})` : '', b ? `prima ${fmtM(b.credit)}` : '');
     }
   }

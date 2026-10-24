@@ -78,3 +78,50 @@ export function planBonus({ matches, now = Date.now(), members, bonus }) {
   }
   return out;
 }
+
+// ---- 11 ideal: el mejor once de cada jornada entre TODOS los jugadores (1 portero + la mejor formación posible).
+export const FORMS = { '4-4-2': [4, 4, 2], '4-3-3': [4, 3, 3], '3-5-2': [3, 5, 2], '3-4-3': [3, 4, 3], '4-5-1': [4, 5, 1], '5-3-2': [5, 3, 2], '5-4-1': [5, 4, 1] };
+// season.pl:{a:{j:{r:pts}}}, base:{a:{p}} → {f, ids:[a...], pts} o null si no hay once completo
+export function idealXI(season, base, round) {
+  const by = { POR: [], DEF: [], MED: [], DEL: [] };
+  for (const [a, x] of Object.entries(season.pl || {})) {
+    const pos = base[a] && base[a].p, v = x && x.j && x.j[round];
+    if (by[pos] && v != null) by[pos].push({ a: +a, v });
+  }
+  for (const k in by) by[k].sort((x, y) => y.v - x.v || x.a - y.a);
+  let best = null;
+  for (const [f, [d, m, l]] of Object.entries(FORMS)) {
+    if (by.POR.length < 1 || by.DEF.length < d || by.MED.length < m || by.DEL.length < l) continue;
+    const pick = [...by.POR.slice(0, 1), ...by.DEF.slice(0, d), ...by.MED.slice(0, m), ...by.DEL.slice(0, l)];
+    const pts = pick.reduce((s, x) => s + x.v, 0);
+    if (!best || pts > best.pts) best = { f, ids: pick.map((x) => x.a), pts };
+  }
+  return best;
+}
+// Calcula los onces ideales de las jornadas terminadas que faltan. have: {r:{...}} ya guardados.
+export function planIdeal({ matches, now = Date.now(), season, base, have = {} }) {
+  const out = {};
+  for (const r of doneRounds(matches, now)) { if (have[r]) continue; const x = idealXI(season, base, r); if (x) out[r] = x; }
+  return out;
+}
+// Paga por cada jugador de la plantilla que está en el once ideal. members:{uid:{squad,r0,cash,ip}}, ideal:{r:{ids}}, per: M por jugador
+// Cada jornada se trata una sola vez (ip[r] = nº de jugadores cobrados; 0 si el admin no tenía prima activada).
+export function payIdeal({ members, ideal, per }) {
+  const out = {};
+  for (const [uid, m] of Object.entries(members)) {
+    if (m.r0 == null) continue;
+    const ip = { ...(m.ip || {}) }, rounds = []; let credit = 0, n = 0;
+    const sq = new Set((m.squad || []).map(String));
+    for (const r of Object.keys(ideal).map(Number).sort((a, b) => a - b)) {
+      if (r < m.r0 || ip[r] != null) continue;
+      const c = ideal[r].ids.filter((a) => sq.has(String(a))).length;
+      ip[r] = per > 0 ? c : 0;
+      if (per > 0 && c) { credit += c * per; n += c; rounds.push({ r, c }); }
+      else if (per <= 0 || !c) rounds.push({ r, c: 0, none: true });
+    }
+    if (!rounds.length) continue;
+    credit = Math.round(credit * 100) / 100;
+    out[uid] = { ip, credit, n, rounds: rounds.filter((x) => !x.none), cash: Math.round(((+m.cash || 0) + credit) * 100) / 100 };
+  }
+  return out;
+}
