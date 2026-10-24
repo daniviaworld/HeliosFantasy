@@ -1,5 +1,5 @@
 // Lógica pura del cierre de mercado de una liga (sin Firebase, para poder probarla).
-import { LOCK_MS, CLAUSE_MULT, MAX_SQUAD, MIN_SQUAD } from './deals-lib.mjs';
+import { LOCK_MS, CLAUSE_MULT, MAX_SQUAD, MIN_SQUAD, clubCount } from './deals-lib.mjs';
 export const DAY = 24 * 3600 * 1000;
 export const MIN_VALUE = 0.16;
 export const CPU_OFFERS = 3; // la liga hace hasta 3 ofertas por un jugador puesto a la venta
@@ -36,7 +36,7 @@ export function initialState(now, base, members, perDay, rng = Math.random) {
 
 // members: {uid:{name,cash,squad,lineup,role,selling,rev,...}}   bids: {uid:{a:amount}}
 // base: {a:{v,t,p,n}}   state: {end,round,values,listings}
-export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, debtPct = 0, minSquad = MIN_SQUAD, rng = Math.random }) {
+export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, debtPct = 0, minSquad = MIN_SQUAD, lockMs = LOCK_MS, clauseMult = CLAUSE_MULT, clubMax = 0, rng = Math.random }) {
   const values = { ...(state.values || {}) };
   const val = (a) => (values[a] != null ? values[a] : base[a] ? base[a].v : 1);
   const M = JSON.parse(JSON.stringify(members));
@@ -84,10 +84,12 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     }
     if (!cands.length) continue;
     const full = (uid) => (M[uid].squad || []).length >= MAX_SQUAD;
-    const win = cands.find((c) => avail(c.uid) + 1e-9 >= c.amt && !full(c.uid));
+    const clubFull = (uid) => !!(clubMax && base[a] && base[a].t && a >= 0 && clubCount(M[uid].squad, base, base[a].t) >= clubMax);
+    const win = cands.find((c) => avail(c.uid) + 1e-9 >= c.amt && !full(c.uid) && !clubFull(c.uid));
     for (const c of cands) {
       if (c === win) continue;
       if (avail(c.uid) + 1e-9 < c.amt) news.push({ k: 'mercado', to: c.uid, a: a, x: `Tu puja por ${pname(a)} se anuló por falta de saldo.` });
+      else if (clubFull(c.uid)) news.push({ k: 'mercado', to: c.uid, a: a, x: `Tu puja por ${pname(a)} se anuló: límite de ${clubMax} jugadores por club.` });
       else if (full(c.uid)) news.push({ k: 'mercado', to: c.uid, a: a, x: `Tu puja por ${pname(a)} se anuló: tu plantilla está completa (${MAX_SQUAD}).` });
       else if (win) news.push({ k: 'mercado', to: c.uid, a: a, x: `Perdiste la puja por ${pname(a)}: ${who(win.uid)} pagó ${fmt(win.amt)}.` });
     }
@@ -96,7 +98,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     buyer.cash = r2(buyer.cash - win.amt);
     buyer.squad = [...(buyer.squad || []), a];
     if (a < 0 && buyer.coach == null) buyer.coach = a;
-    buyer.pm = { ...(buyer.pm || {}), [a]: { l: now + LOCK_MS, c: r2(Math.max(win.amt, v) * CLAUSE_MULT) } };
+    buyer.pm = { ...(buyer.pm || {}), [a]: { l: now + lockMs, c: r2(Math.max(win.amt, v) * clauseMult) } };
     buyer.saved = false;
     changed.add(win.uid);
     if (!cpu) {
@@ -114,7 +116,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
       news.push({ k: 'fichaje', to: L.seller, a: a, x: `Vendes a ${pname(a)} a ${who(win.uid)} por ${fmt(win.amt)}.` });
     }
     news.push({ k: 'fichaje', to: win.uid, a: a, x: `Fichas a ${pname(a)}${cpu ? '' : ' de ' + who(L.seller)} por ${fmt(win.amt)}.` });
-    news.push({ k: 'fichaje', to: null, a: a, x: `${who(win.uid)} ficha a ${pname(a)}${cpu ? '' : ' de ' + who(L.seller)} por ${fmt(win.amt)}.` });
+    news.push({ k: 'fichaje', to: null, a: a, tr: { f: cpu ? null : L.seller, t: win.uid, p: win.amt, k: 'mercado' }, x: `${who(win.uid)} ficha a ${pname(a)}${cpu ? '' : ' de ' + who(L.seller)} por ${fmt(win.amt)}.` });
     sold.push({ a, uid: win.uid, amt: win.amt });
   }
 

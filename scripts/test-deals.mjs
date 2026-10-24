@@ -89,4 +89,46 @@ const pc = planClose({ minSquad: 0, now, state: { end: 0, round: 1, values: {}, 
 ok(protectedUntil(pc.memberUpdates.b.pm, 1) === now + LOCK_MS, 'fichaje de mercado: protegido 14 días');
 ok(pc.memberUpdates.b.pm[1].c === 99 * CLAUSE_MULT || pc.memberUpdates.b.pm[1].c === Math.round(99 * CLAUSE_MULT * 100) / 100, 'cláusula tras comprar = precio pagado × 1,5');
 ok(!pc.memberUpdates.s.pm[1] && pc.memberUpdates.s.cap === null, 'el vendedor pierde su meta y capitán');
+// reglas ajustables: protección, multiplicador, caducidad y límite por club
+{
+  const M2 = mk(); const dd = D({ type: 'offer', status: 'accepted', buyer: 'b', seller: 's', a: 1, amount: 5 });
+  let q = planDeals({ now, members: M2, deals: [dd], base, rules: { lockDays: 3, clauseMult: 2 } });
+  ok(q.dealUpdates[dd.id].status === 'done', 'oferta con reglas propias hecha');
+  ok(protectedUntil(q.memberUpdates.b.pm, 1) === now + 3 * 24 * 3600 * 1000, 'protección de 3 días');
+  ok(q.memberUpdates.b.pm[1].c === 10, 'cláusula nueva = 5 × 2');
+  ok(q.news.some((n) => n.to === null && n.tr && n.tr.f === 's' && n.tr.t === 'b' && n.tr.p === 5), 'la noticia pública guarda quién, a quién y cuánto');
+  const old = D({ type: 'offer', buyer: 'b', seller: 's', a: 2, amount: 5, ts: now - 3 * 24 * 3600 * 1000 });
+  ok(planDeals({ now, members: mk(), deals: [old], base, rules: { offerDays: 2 } }).dealUpdates[old.id].status === 'expired', 'caduca a los 2 días');
+  ok(!planDeals({ now, members: mk(), deals: [old], base, rules: { offerDays: 5 } }).dealUpdates[old.id], 'con 5 días aún no caduca');
+  q = planDeals({ now, members: mk(), deals: [dd], base, rules: { clubMax: 11 } });
+  ok(q.dealUpdates[dd.id].status === 'failed' && /límite de 11/.test(q.dealUpdates[dd.id].note), 'límite por club: comprador ya tiene 12 del RMA (máx. 11)');
+  const m3 = mk(); m3.b.squad = sq(20, 10);
+  q = planDeals({ now, members: m3, deals: [dd], base, rules: { clubMax: 11 } });
+  ok(q.dealUpdates[dd.id].status === 'done', 'por debajo del límite sí');
+}
+// intercambio con dinero
+{
+  const mkS = () => { const M = mk(); M.s.squad = sq(1, 14); M.b.squad = sq(20, 12); return M; };
+  const sw = (o) => D({ type: 'swap', status: 'accepted', buyer: 'b', seller: 's', a: 5, give: 22, amount: 2, ...o });
+  let d = sw({}), q = planDeals({ now, members: mkS(), deals: [d], base, rules: {} });
+  ok(q.dealUpdates[d.id].status === 'done', 'intercambio hecho');
+  const U = q.memberUpdates;
+  ok(U.b.squad.includes(5) && !U.b.squad.includes(22) && U.s.squad.includes(22) && !U.s.squad.includes(5), 'los jugadores cambian de dueño');
+  ok(U.b.squad.length === 12 && U.s.squad.length === 14, 'mismos tamaños de plantilla');
+  ok(U.b.cash === 48 && U.s.cash === 12, 'el comprador paga 2 M al otro (' + U.b.cash + '/' + U.s.cash + ')');
+  ok(protectedUntil(U.b.pm, 5) > now && protectedUntil(U.s.pm, 22) > now, 'ambos quedan protegidos');
+  ok(q.news.some((n) => n.to === null && n.tr && n.tr.k === 'swap' && n.tr.g === 22 && n.tr.p === 2 && n.tr.t === 'b' && n.tr.f === 's'), 'registro del intercambio para poder deshacerlo');
+  d = sw({ give: 99 }); q = planDeals({ now, members: mkS(), deals: [d], base, rules: {} });
+  ok(q.dealUpdates[d.id].status === 'failed', 'falla si el jugador ofrecido ya no es tuyo');
+  d = sw({ amount: 500 }); q = planDeals({ now, members: mkS(), deals: [d], base, rules: {} });
+  ok(q.dealUpdates[d.id].status === 'failed' && /saldo/.test(q.dealUpdates[d.id].note), 'falla sin saldo');
+  d = sw({ amount: 0 }); q = planDeals({ now, members: mkS(), deals: [d], base, rules: {} });
+  ok(q.dealUpdates[d.id].status === 'done' && q.memberUpdates.b.cash === 50, 'intercambio sin dinero');
+  const mt = mkS(); mt.s.squad = sq(1, 11); d = sw({}); q = planDeals({ now, members: mt, deals: [d], base, rules: {} });
+  ok(q.dealUpdates[d.id].status === 'done', 'con 11 jugadores se puede intercambiar (el tamaño no cambia)');
+  d = D({ type: 'swap', buyer: 'b', seller: 's', a: 5, give: 22, amount: 0, ts: now - 3 * 24 * 3600 * 1000 });
+  ok(planDeals({ now, members: mkS(), deals: [d], base, rules: {} }).dealUpdates[d.id].status === 'expired', 'el intercambio pendiente caduca');
+  d = sw({}); q = planDeals({ now, members: mkS(), deals: [d], base, rules: { clubMax: 11 } });
+  ok(q.dealUpdates[d.id].status === 'done', 'intercambio mismo club no cambia los conteos');
+}
 console.log(fail ? 'FALLOS ' + fail : 'TODO OK'); process.exit(fail ? 1 : 0);

@@ -104,4 +104,16 @@ ok(r4.news.filter((n) => n.to === null).every((n) => !/Paco/.test(n.x)), 'modo a
   ok(r3.sold.some((x) => x.a === 1 && x.uid === 'u3'), 'plantilla completa (26): gana el siguiente');
   ok(r3.news.some((n) => n.to === 'u2' && /plantilla está completa/.test(n.x)), 'aviso de plantilla completa');
 }
+// límite por club en el cierre
+{
+  const bs = {}; for (let a = 1; a <= 30; a++) bs[a] = { n: 'J' + a, v: 2, t: a <= 5 ? 'RMA' : 'FCB', p: 'DEL' };
+  const mm = { u1: { name: 'A', cash: 50, squad: [1, 2], lineup: {}, role: {}, selling: {}, rev: 0 }, u2: { name: 'B', cash: 50, squad: [10], lineup: {}, role: {}, selling: {}, rev: 0 } };
+  const stx = { end: 1000, round: 1, values: {}, listings: [3, 20] };
+  const rr = planClose({ minSquad: 0, now: 5000, state: stx, members: mm, bids: { u1: { 3: 3, 20: 3 } }, base: bs, perDay: 3, clubMax: 2, rng });
+  ok(!rr.memberUpdates.u1.squad.includes(3) && rr.memberUpdates.u1.squad.includes(20), 'con límite 2 por club no ficha al 3.º del RMA pero sí a otro club');
+  ok(rr.news.some((n) => /límite de 2/.test(n.x)), 'aviso del límite');
+  const r3 = planClose({ minSquad: 0, now: 5000, state: stx, members: mm, bids: { u1: { 3: 3 } }, base: bs, perDay: 3, lockMs: 86400000, clauseMult: 2, rng });
+  ok(r3.memberUpdates.u1.pm[3].c === 6 && r3.memberUpdates.u1.pm[3].l === 5000 + 86400000, 'cláusula ×2 y protección de 1 día');
+  ok(r3.news.some((n) => n.to === null && n.tr && n.tr.t === 'u1' && n.tr.f === null && n.tr.p === 3), 'registro de traspaso del mercado');
+}
 console.log(fail ? 'FALLOS ' + fail : 'TODO OK'); process.exit(fail ? 1 : 0);

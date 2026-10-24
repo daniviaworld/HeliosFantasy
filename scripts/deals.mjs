@@ -33,7 +33,7 @@ for (const L of leagues.docs) {
     const batch = db.batch();
     for (const [uid, upd] of Object.entries(r.memberUpdates)) batch.update(ref.collection('members').doc(uid), upd);
     for (const [id, upd] of Object.entries(r.dealUpdates)) batch.update(ref.collection('deals').doc(id), upd);
-    r.news.forEach((n) => batch.set(ref.collection('news').doc(), { ts: now, k: n.k, to: n.to || null, a: n.a == null ? null : n.a, x: n.x }));
+    r.news.forEach((n) => batch.set(ref.collection('news').doc(), { ts: now, k: n.k, to: n.to || null, a: n.a == null ? null : n.a, ...(n.tr ? { tr: n.tr } : {}), x: n.x }));
     // limpieza: tratos terminados con más de 7 días
     dSnap.forEach((d) => { const x = d.data(); if (['done', 'failed', 'expired', 'rejected', 'cancelled'].includes(x.status) && now - (x.doneAt || x.ts || 0) > 7 * 86400000) batch.delete(d.ref); });
     await batch.commit();

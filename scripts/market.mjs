@@ -1,6 +1,7 @@
 // Cierra los mercados de todas las ligas cuya hora de cierre ya pasó (cada 24 h).
 // Se ejecuta desde GitHub Actions cada pocos minutos. Usa la cuenta de servicio de Firebase.
 import { planClose, initialState, newCpuListings } from './market-lib.mjs';
+import { lockMsOf, clauseMultOf, clubMaxOf } from './deals-lib.mjs';
 import { planRound } from './rounds-lib.mjs';
 
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -20,6 +21,9 @@ let closed = 0, created = 0;
 for (const L of leagues.docs) {
   try {
     const ref = L.ref, data = L.data(), perDay = Math.max(18, (data.rules && data.rules.perDay) || 18), anon = !!(data.rules && data.rules.anon);
+    // draft: mientras se reparten los jugadores por turnos (o aún no ha empezado) el mercado no se cierra
+    const dSnap = await ref.collection('market').doc('draft').get();
+    if ((dSnap.exists && (dSnap.data() || {}).status === 'running') || (!dSnap.exists && data.rules && data.rules.start === 'draft')) { console.log('Mercado en pausa por el draft en', data.name); continue; }
     const stRef = ref.collection('market').doc('state');
     const stSnap = await stRef.get();
     const memSnap = await ref.collection('members').get();
@@ -43,7 +47,8 @@ for (const L of leagues.docs) {
     const bids = {};
     bidSnap.forEach((d) => { const x = d.data() || {}; if (x.round == null || x.round === st.round) bids[d.id] = x.bids || {}; });
     const debtPct = data.rules && data.rules.debt != null ? +data.rules.debt : 20;
-    const r = planClose({ now, state: st, members, bids, base, perDay, anon, debtPct });
+    const rl = data.rules || {};
+    const r = planClose({ now, state: st, members, bids, base, perDay, anon, debtPct, lockMs: lockMsOf(rl), clauseMult: clauseMultOf(rl), clubMax: clubMaxOf(rl) });
     const batch = db.batch();
     batch.set(stRef, r.state);
     // ofertas de la liga: las que seguían sin respuesta caducan y se crean las nuevas
@@ -53,7 +58,7 @@ for (const L of leagues.docs) {
     for (const [uid, upd] of Object.entries(r.memberUpdates)) batch.update(ref.collection('members').doc(uid), upd);
     bidSnap.forEach((d) => batch.delete(d.ref));
     (await ref.collection('bidpub').get()).forEach((d) => batch.delete(d.ref));
-    r.news.forEach((n) => batch.set(ref.collection('news').doc(), { ts: now, k: n.k, to: n.to || null, a: n.a == null ? null : n.a, x: n.x }));
+    r.news.forEach((n) => batch.set(ref.collection('news').doc(), { ts: now, k: n.k, to: n.to || null, a: n.a == null ? null : n.a, ...(n.tr ? { tr: n.tr } : {}), x: n.x }));
     batch.set(ref.collection('news').doc(), { ts: now, k: 'jornada', to: null, x: `Mercado cerrado: ${r.sold.length} fichajes. Ya hay jugadores nuevos hasta mañana.` });
     await batch.commit();
     closed++; console.log('Mercado cerrado en', data.name, '·', r.sold.length, 'fichajes');
