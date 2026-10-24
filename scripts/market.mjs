@@ -46,6 +46,10 @@ for (const L of leagues.docs) {
     const r = planClose({ now, state: st, members, bids, base, perDay, anon, debtPct });
     const batch = db.batch();
     batch.set(stRef, r.state);
+    // ofertas de la liga: las que seguían sin respuesta caducan y se crean las nuevas
+    const dealsRef = ref.collection('deals');
+    (await dealsRef.where('type', '==', 'cpu').where('status', '==', 'pending').get()).forEach((d) => batch.update(d.ref, { status: 'expired' }));
+    for (const o of r.cpuNew || []) batch.set(dealsRef.doc(), { type: 'cpu', buyer: null, seller: o.seller, sellerName: (members[o.seller] || {}).name || '', a: o.a, amount: o.amount, n: o.n, status: 'pending', ts: now });
     for (const [uid, upd] of Object.entries(r.memberUpdates)) batch.update(ref.collection('members').doc(uid), upd);
     bidSnap.forEach((d) => batch.delete(d.ref));
     (await ref.collection('bidpub').get()).forEach((d) => batch.delete(d.ref));

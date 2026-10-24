@@ -2,6 +2,7 @@
 import { LOCK_MS, CLAUSE_MULT } from './deals-lib.mjs';
 export const DAY = 24 * 3600 * 1000;
 export const MIN_VALUE = 0.16;
+export const CPU_OFFERS = 3; // la liga hace hasta 3 ofertas por un jugador puesto a la venta
 const r2 = (x) => Math.round(x * 100) / 100;
 
 export function shuffle(a, rng = Math.random) {
@@ -108,6 +109,25 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     sold.push({ a, uid: win.uid, amt: win.amt });
   }
 
+  // Ofertas de la liga por los jugadores que los mánagers han puesto a la venta y nadie ha comprado:
+  // en cada cierre ofrece una cantidad (hasta 3 veces); después el jugador vuelve a la plantilla.
+  const soldKeys = new Set(sold.map((x) => String(x.a)));
+  const prevCpu = state.cpu || {}, nextCpu = {}, cpuNew = [];
+  for (const L of listings) {
+    if (L.seller == null || soldKeys.has(String(L.a))) continue;
+    const s0 = M[L.seller], key = `${L.seller}|${L.a}`, n = prevCpu[key] || 0, a = L.a;
+    if (!s0 || !(s0.selling && s0.selling[a] != null)) continue;
+    if (n >= CPU_OFFERS) {
+      delete s0.selling[a]; s0.saved = s0.saved; changed.add(L.seller);
+      news.push({ k: 'mercado', to: L.seller, a, x: `${pname(a)} no ha encontrado comprador tras ${CPU_OFFERS} ofertas de la liga: vuelve a tu plantilla.` });
+      continue;
+    }
+    const amount = Math.max(MIN_VALUE, r2(val(a) * (0.9 + 0.2 * rng())));
+    nextCpu[key] = n + 1;
+    cpuNew.push({ seller: L.seller, a, amount, n: n + 1 });
+    news.push({ k: 'mercado', to: L.seller, a, x: `La liga te ofrece ${fmt(amount)} por ${pname(a)} (oferta ${n + 1} de ${CPU_OFFERS}). Acéptala en Mercado → Mis ops. → Venta.` });
+  }
+
   const memberUpdates = {};
   for (const uid of changed) {
     const m = M[uid];
@@ -118,6 +138,6 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
   }
   let end = (state.end || now) + DAY;
   if (end <= now + 3600 * 1000) end = now + DAY;
-  const next = { end, round: (state.round || 0) + 1, values, listings: newCpuListings(base, M, perDay, rng) };
-  return { state: next, memberUpdates, news, sold };
+  const next = { end, round: (state.round || 0) + 1, values, listings: newCpuListings(base, M, perDay, rng), cpu: nextCpu };
+  return { state: next, memberUpdates, news, sold, cpuNew };
 }

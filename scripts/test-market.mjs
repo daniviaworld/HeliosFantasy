@@ -71,4 +71,20 @@ ok(r4.news.filter((n) => n.to === null).every((n) => !/Paco/.test(n.x)), 'modo a
   rr = planClose({ now: 5000, state: s0, members: mm, bids: { u1: { 10: 2.5, 11: 2.5 } }, base, perDay: 4, rng, debtPct: 20 });
   ok(rr.memberUpdates.u1 && rr.memberUpdates.u1.squad.filter((a) => a === 10 || a === 11).length === 1, 'solo gana una de dos pujas que juntas superan el límite');
 }
+// 8) la liga hace hasta 3 ofertas por los jugadores puestos a la venta sin comprador
+{
+  const mk = () => ({ u1: { name: 'A', cash: 5, squad: [1, 2, 3], lineup: {}, role: {}, selling: { 2: 2 }, rev: 0 }, u2: { name: 'B', cash: 50, squad: [6], lineup: {}, role: {}, selling: {}, rev: 0 } });
+  const s0 = { end: 0, round: 1, values: {}, listings: [], cpu: {} };
+  let r1 = planClose({ now: 5000, state: s0, members: mk(), bids: {}, base, perDay: 2, rng });
+  ok(r1.cpuNew.length === 1 && r1.cpuNew[0].seller === 'u1' && r1.cpuNew[0].a === 2 && r1.cpuNew[0].n === 1, 'primera oferta de la liga');
+  const v2 = base[2].v;
+  ok(r1.cpuNew[0].amount >= v2 * 0.9 - 0.011 && r1.cpuNew[0].amount <= v2 * 1.1 + 0.011, 'la oferta ronda el valor del jugador (' + r1.cpuNew[0].amount + ' vs ' + v2 + ')');
+  ok(r1.state.cpu['u1|2'] === 1, 'se recuerda cuántas ofertas lleva');
+  ok(r1.news.some((n) => n.to === 'u1' && /La liga te ofrece/.test(n.x)), 'el mánager recibe el aviso');
+  const r3 = planClose({ now: 5000, state: { ...s0, cpu: { 'u1|2': 3 } }, members: mk(), bids: {}, base, perDay: 2, rng });
+  ok(r3.cpuNew.length === 0 && r3.memberUpdates.u1 && !('2' in r3.memberUpdates.u1.selling) && !r3.state.cpu['u1|2'], 'tras 3 ofertas el jugador vuelve a la plantilla');
+  ok(r3.memberUpdates.u1.squad.includes(2), 'sigue en la plantilla');
+  const rs = planClose({ now: 5000, state: s0, members: mk(), bids: { u2: { 2: 3 } }, base, perDay: 2, rng });
+  ok(rs.cpuNew.length === 0 && rs.sold.some((x) => x.a === 2), 'si un mánager lo compra no hay oferta de la liga');
+}
 console.log(fail ? 'FALLOS ' + fail : 'TODO OK'); process.exit(fail ? 1 : 0);
