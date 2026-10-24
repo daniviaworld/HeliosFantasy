@@ -129,7 +129,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     const s0 = M[L.seller], key = `${L.seller}|${L.a}`, n = prevCpu[key] || 0, a = L.a;
     if (!s0 || !(s0.selling && s0.selling[a] != null)) continue;
     if (n >= CPU_OFFERS) {
-      delete s0.selling[a]; s0.saved = s0.saved; changed.add(L.seller);
+      delete s0.selling[a]; s0.saved = false; changed.add(L.seller);
       news.push({ k: 'mercado', to: L.seller, a, x: `${pname(a)} no ha encontrado comprador tras ${CPU_OFFERS} ofertas de la liga: vuelve a tu plantilla.` });
       continue;
     }
@@ -145,7 +145,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     m.pl = m.squad.length;
     m.val = r2(m.squad.reduce((s, a) => s + val(a), 0));
     m.rev = (m.rev || 0) + 1;
-    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup, role: m.role || {}, selling: m.selling || {}, pm: m.pm || {}, cap: m.cap == null ? null : m.cap, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach };
+    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup, role: m.role || {}, selling: m.selling || {}, pm: m.pm || {}, cap: m.cap == null ? null : m.cap, saved: !!m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach };
   }
   let end = (state.end || now) + DAY;
   if (end <= now + 3600 * 1000) end = now + DAY;

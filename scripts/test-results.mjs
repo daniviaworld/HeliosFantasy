@@ -148,3 +148,11 @@ console.log('anchor ok');
   assert.equal(lastCompleteRound(rs, now), 9);
 }
 console.log('late ok');
+{
+  const { statArr, addStat } = await import('./results-lib.mjs');
+  const a = statArr({ minutes: 90, goals: 1, assists: 0, penScored: 1, yellow: 1, cleanSheet: true });
+  assert.deepEqual(a, [90, 1, 0, 1, 0, 1, 0, 0, 1]);
+  assert.deepEqual(addStat(a, [20, 0, 1, 0, 0, 0, 0, 0, 0]), [110, 1, 1, 1, 0, 1, 0, 0, 1]);
+  assert.deepEqual(addStat(undefined, a), a);
+}
+console.log('stats ok');

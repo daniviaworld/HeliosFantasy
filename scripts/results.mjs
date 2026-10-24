@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import { norm } from './lib.mjs';
 import { planSettle, planBonus, planIdeal, payIdeal } from './rounds-lib.mjs';
-import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched } from './results-lib.mjs';
+import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched, statArr, addStat } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -146,6 +146,14 @@ if (FULL) umItems = [];
 let umChanged = false;
 
 // 2) puntos de los partidos terminados que aún no están procesados
+// desglose de estadísticas por jornada (documentos points/s{jornada}: así points/season no crece sin límite)
+const stR = {};
+async function stDoc(r) {
+  if (stR[r]) return stR[r];
+  let pl = {};
+  if (!FULL && db) { const d = await db.doc('points/s' + r).get(); if (d.exists) pl = (d.data() || {}).pl || {}; }
+  return (stR[r] = { pl, dirty: false });
+}
 let processed = 0;
 for (const m of matches) {
   if (m.st !== 'post' || season.done[m.id]) continue;
@@ -158,6 +166,7 @@ for (const m of matches) {
   for (const [api, p] of top) { const s = res.pl[api]; console.log(`   ${String(p).padStart(3)}  ${byApi[api].n} (${byApi[api].t} ${byApi[api].p}) · ${s.minutes}' G${s.goals} A${s.assists} T${s.yellow}/${s.red}${s.cleanSheet ? ' PC' : ''}`); }
   if (res.unmatched.length) console.log('   sin emparejar:', res.unmatched.join(', '));
   for (const it of res.um || []) { umItems.push({ m: m.id, r: m.r, ...it }); umChanged = true; }
+  { const sd = await stDoc(m.r); for (const api of Object.keys(pts)) { sd.pl[api] = addStat(sd.pl[api], statArr(res.pl[api])); } sd.dirty = true; }
   for (const [api, p] of Object.entries(pts)) {
     const x = (season.pl[api] = season.pl[api] || { j: {}, t: 0 });
     x.j[m.r] = (x.j[m.r] || 0) + p;
@@ -176,6 +185,7 @@ console.log(`\nPartidos nuevos procesados: ${processed}`);
   const { resolved, left } = resolveUnmatched(umItems, matcher, byApi);
   for (const x of resolved) {
     const e = (season.pl[x.api] = season.pl[x.api] || { j: {}, t: 0 });
+    { const sd = await stDoc(x.r); sd.pl[x.api] = addStat(sd.pl[x.api], statArr(x.item.s)); sd.dirty = true; }
     e.j[x.r] = (e.j[x.r] || 0) + x.pts;
     e.t = Object.values(e.j).reduce((a, b) => a + b, 0);
     console.log(`Emparejado a posteriori: ${x.item.names[0]} (${x.item.code}) → ${byApi[x.api].n}: ${x.pts} pts en la jornada ${x.r}`);
@@ -195,7 +205,8 @@ for (const m of matches) {
   const pts = finalizePoints(res, byApi);
   const coach = {};
   for (const [side, o] of [[m.h, m.a], [m.a, m.h]]) { const code = teamCode(side.n); if (code) coach[code] = coachPoints(side.s, o.s); }
-  liveM[m.id] = { r: m.r, h: teamCode(m.h.n), a: teamCode(m.a.n), hs: m.h.s, as: m.a.s, pl: pts, coach };
+  const stl = {}; for (const api of Object.keys(pts)) stl[api] = statArr(res.pl[api]);
+  liveM[m.id] = { r: m.r, h: teamCode(m.h.n), a: teamCode(m.a.n), hs: m.h.s, as: m.a.s, pl: pts, coach, st: stl };
   console.log(`EN DIRECTO J${m.r} · ${m.h.n} ${m.h.s}-${m.a.s} ${m.a.n} (${Object.keys(pts).length} jugadores con puntos provisionales)`);
 }
 
@@ -205,6 +216,7 @@ const size = Buffer.byteLength(JSON.stringify(season)) + Buffer.byteLength(JSON.
 if (size > 900 * 1024) { console.error('Datos demasiado grandes'); process.exit(1); }
 const ts = admin.firestore.FieldValue.serverTimestamp();
 await db.doc('catalog/fixtures').set({ season: cat.season, round, offset, src: usedFD ? 'fd' : 'espn', matches: compact, updatedAt: ts });
+for (const [r, sd] of Object.entries(stR)) if (sd.dirty) await db.doc('points/s' + r).set({ r: +r, pl: sd.pl, updatedAt: ts });
 if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, updatedAt: ts });
 if (umChanged || FULL) await uRef.set({ items: umItems.slice(-200), updatedAt: ts });
 {

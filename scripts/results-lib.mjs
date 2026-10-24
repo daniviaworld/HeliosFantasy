@@ -20,6 +20,16 @@ export function playerPoints(s, pos) {
   p += (s.ownGoals || 0) * FORMULA.ownGoal;
   return p;
 }
+// Estadísticas de un jugador en un partido, en formato compacto para guardar (desglose de puntos en la app):
+// [minutos, goles, asistencias, penaltis marcados, penaltis fallados, amarillas, rojas, goles en propia, portería a cero]
+export function statArr(s) {
+  return [s.minutes | 0, s.goals | 0, s.assists | 0, s.penScored | 0, s.penMissed | 0, s.yellow | 0, s.red | 0, s.ownGoals | 0, s.cleanSheet ? 1 : 0];
+}
+// Suma dos filas de estadísticas (jugador con dos partidos en la misma jornada).
+export function addStat(a, b) {
+  if (!a) return b.slice();
+  return a.map((x, i) => (i === 8 ? Math.max(x, b[i] || 0) : x + (b[i] || 0)));
+}
 export function coachPoints(own, other) { return own > other ? COACH.win : own === other ? COACH.draw : COACH.loss; }
 
 // ---- equipos de ESPN -> siglas del catálogo
