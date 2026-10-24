@@ -1,5 +1,5 @@
 // Lógica pura del cierre de mercado de una liga (sin Firebase, para poder probarla).
-import { LOCK_MS, CLAUSE_MULT } from './deals-lib.mjs';
+import { LOCK_MS, CLAUSE_MULT, MAX_SQUAD, MIN_SQUAD } from './deals-lib.mjs';
 export const DAY = 24 * 3600 * 1000;
 export const MIN_VALUE = 0.16;
 export const CPU_OFFERS = 3; // la liga hace hasta 3 ofertas por un jugador puesto a la venta
@@ -36,7 +36,7 @@ export function initialState(now, base, members, perDay, rng = Math.random) {
 
 // members: {uid:{name,cash,squad,lineup,role,selling,rev,...}}   bids: {uid:{a:amount}}
 // base: {a:{v,t,p,n}}   state: {end,round,values,listings}
-export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, debtPct = 0, rng = Math.random }) {
+export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, debtPct = 0, minSquad = MIN_SQUAD, rng = Math.random }) {
   const values = { ...(state.values || {}) };
   const val = (a) => (values[a] != null ? values[a] : base[a] ? base[a].v : 1);
   const M = JSON.parse(JSON.stringify(members));
@@ -60,6 +60,13 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
   const sold = [];
   for (const L of shuffle(listings, rng)) {
     const a = L.a, cpu = L.seller == null, v = val(a), min = cpu ? v : L.ask;
+    // un mánager no puede vender si se quedaría con menos de 11 jugadores: el jugador sale del mercado
+    if (!cpu && (M[L.seller].squad || []).length <= minSquad) {
+      if (M[L.seller].selling) delete M[L.seller].selling[a];
+      changed.add(L.seller); L.void = true;
+      news.push({ k: 'mercado', to: L.seller, a, x: `${pname(a)} sale del mercado: no puedes quedarte con menos de ${minSquad} jugadores.` });
+      continue;
+    }
     const cands = [];
     for (const [uid, b] of Object.entries(bids || {})) {
       const amt = b ? b[a] : undefined;
@@ -76,10 +83,12 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
       }
     }
     if (!cands.length) continue;
-    const win = cands.find((c) => avail(c.uid) + 1e-9 >= c.amt);
+    const full = (uid) => (M[uid].squad || []).length >= MAX_SQUAD;
+    const win = cands.find((c) => avail(c.uid) + 1e-9 >= c.amt && !full(c.uid));
     for (const c of cands) {
       if (c === win) continue;
       if (avail(c.uid) + 1e-9 < c.amt) news.push({ k: 'mercado', to: c.uid, a: a, x: `Tu puja por ${pname(a)} se anuló por falta de saldo.` });
+      else if (full(c.uid)) news.push({ k: 'mercado', to: c.uid, a: a, x: `Tu puja por ${pname(a)} se anuló: tu plantilla está completa (${MAX_SQUAD}).` });
       else if (win) news.push({ k: 'mercado', to: c.uid, a: a, x: `Perdiste la puja por ${pname(a)}: ${who(win.uid)} pagó ${fmt(win.amt)}.` });
     }
     if (!win) continue;
@@ -114,7 +123,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
   const soldKeys = new Set(sold.map((x) => String(x.a)));
   const prevCpu = state.cpu || {}, nextCpu = {}, cpuNew = [];
   for (const L of listings) {
-    if (L.seller == null || soldKeys.has(String(L.a))) continue;
+    if (L.seller == null || L.void || soldKeys.has(String(L.a))) continue;
     const s0 = M[L.seller], key = `${L.seller}|${L.a}`, n = prevCpu[key] || 0, a = L.a;
     if (!s0 || !(s0.selling && s0.selling[a] != null)) continue;
     if (n >= CPU_OFFERS) {

@@ -85,7 +85,7 @@ ok(r.dealUpdates[e1.id].status === 'done' && r.dealUpdates[e2.id].status === 'fa
 // mercado: el que ficha queda protegido
 const bids = { b: { 1: 99 } };
 const mm = { s: { name: 'S', cash: 1, squad: sq(1, 3), lineup: {}, role: {}, selling: { 1: 5 }, pm: { 1: { c: 3 } }, cap: 1 }, b: { name: 'B', cash: 100, squad: [], lineup: {}, role: {}, selling: {}, pm: {} } };
-const pc = planClose({ now, state: { end: 0, round: 1, values: {}, listings: [] }, members: mm, bids, base, perDay: 3 });
+const pc = planClose({ minSquad: 0, now, state: { end: 0, round: 1, values: {}, listings: [] }, members: mm, bids, base, perDay: 3 });
 ok(protectedUntil(pc.memberUpdates.b.pm, 1) === now + LOCK_MS, 'fichaje de mercado: protegido 14 días');
 ok(pc.memberUpdates.b.pm[1].c === 99 * CLAUSE_MULT || pc.memberUpdates.b.pm[1].c === Math.round(99 * CLAUSE_MULT * 100) / 100, 'cláusula tras comprar = precio pagado × 1,5');
 ok(!pc.memberUpdates.s.pm[1] && pc.memberUpdates.s.cap === null, 'el vendedor pierde su meta y capitán');

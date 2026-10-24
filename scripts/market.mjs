@@ -41,7 +41,7 @@ for (const L of leagues.docs) {
     }
     const bidSnap = await ref.collection('bids').get();
     const bids = {};
-    bidSnap.forEach((d) => { bids[d.id] = (d.data() || {}).bids || {}; });
+    bidSnap.forEach((d) => { const x = d.data() || {}; if (x.round == null || x.round === st.round) bids[d.id] = x.bids || {}; });
     const debtPct = data.rules && data.rules.debt != null ? +data.rules.debt : 20;
     const r = planClose({ now, state: st, members, bids, base, perDay, anon, debtPct });
     const batch = db.batch();

@@ -4,6 +4,7 @@
 // Variables: FIREBASE_SERVICE_ACCOUNT (obligatoria salvo DRY_RUN=1), FULL=1 (rescanear toda la temporada), SEASON_START (AAAA-MM-DD)
 import fs from 'node:fs';
 import { norm } from './lib.mjs';
+import { planSettle, planBonus } from './rounds-lib.mjs';
 import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
@@ -188,3 +189,29 @@ if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, u
   if (Object.keys(liveM).length || had) { await lref.set({ m: liveM, updatedAt: ts }); console.log('Puntos en directo guardados:', Object.keys(liveM).length, 'partidos.'); }
 }
 console.log('Guardado en Firestore.');
+
+// 3) cierre de jornadas en el servidor: rellena los puntos de los mánagers que aún no han abierto la app
+try {
+  const leagues = await db.collection('leagues').get();
+  let filled = 0;
+  for (const L of leagues.docs) {
+    const rules = L.data().rules || {};
+    const members = {}; (await L.ref.collection('members').get()).forEach((d) => { members[d.id] = d.data(); });
+    const snaps = {}; (await L.ref.collection('rounds').get()).forEach((d) => { snaps[+d.id] = (d.data() || {}).elig || {}; });
+    const out = planSettle({ matches: compact, members, snaps, season, base: byApi, capOn: !!rules.cap });
+    // puntos recién cerrados + prima por punto de esta liga
+    const merged = {};
+    for (const [uid, m] of Object.entries(members)) merged[uid] = { ...m, rp: out[uid] ? out[uid].rp : (m.rp || {}) };
+    const bon = planBonus({ matches: compact, members: merged, bonus: +rules.bonus || 0 });
+    const fmtM = (x) => x.toFixed(2).replace('.', ',') + ' M';
+    for (const uid of new Set([...Object.keys(out), ...Object.keys(bon)])) {
+      const o = out[uid], b = bon[uid], upd = {};
+      if (o) { upd.tot = o.tot; upd.j = o.j; for (const r of o.added) upd['rp.' + r] = o.rp[r]; }
+      if (b) { upd.cash = b.cash; upd.bp = b.bp; upd.rev = (members[uid].rev || 0) + 1; }
+      await L.ref.collection('members').doc(uid).update(upd);
+      if (b) await L.ref.collection('news').doc().set({ ts: Date.now(), k: 'primas', to: uid, a: null, x: `Prima de la jornada ${b.rounds.join(', ')}: ${fmtM(b.credit)}.` });
+      filled++; console.log(`${members[uid].name} en ${L.data().name}:`, o ? `jornadas ${o.added.join(', ')} cerradas (total ${o.tot})` : '', b ? `prima ${fmtM(b.credit)}` : '');
+    }
+  }
+  console.log('Mánagers con jornadas cerradas por el servidor:', filled);
+} catch (e) { console.error('Error al cerrar jornadas:', e.message); }
