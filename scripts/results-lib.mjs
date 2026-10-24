@@ -213,10 +213,24 @@ export function parseSummary(sum, match) {
 }
 
 // ---- emparejar jugadores de ESPN con los del catálogo (por club y nombre)
-export function makeMatcher(players) {
-  const byTeam = {};
+const lev = (a, b) => {
+  if (a === b) return 0;
+  const m = a.length, n = b.length; if (!m || !n) return Math.max(m, n);
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+};
+// aliases: {espnId: apiId} para los casos que no se pueden adivinar por el nombre (fichero aliases.json)
+export function makeMatcher(players, aliases = {}) {
+  const byTeam = {}, all = [];
+  for (const p of players) if (p.p !== 'ENT') all.push({ ...p, nn: norm(p.n), toks: norm(p.n).split(' ') });
   for (const p of players) { if (p.p === 'ENT') continue; (byTeam[p.t] = byTeam[p.t] || []).push({ ...p, nn: norm(p.n), toks: norm(p.n).split(' ') }); }
-  return function match(code, names) {
+  return function match(code, names, espnId) {
+    if (espnId != null && aliases[espnId] != null) return Number(aliases[espnId]);
     const list = byTeam[code] || [];
     const ns = names.filter(Boolean);
     for (const n of ns) { const h = list.filter((p) => p.nn === n); if (h.length === 1) return h[0].a; }
@@ -236,6 +250,26 @@ export function makeMatcher(players) {
       const h = list.filter((p) => p.toks[p.toks.length - 1] === last && p.toks[0][0] === ini);
       if (h.length === 1) return h[0].a;
     }
+    // solo apellido (único en el club)
+    for (const n of ns) {
+      const nt = n.split(' '), last = nt[nt.length - 1];
+      if (last.length < 4) continue;
+      const h = list.filter((p) => p.toks.includes(last));
+      if (h.length === 1) return h[0].a;
+    }
+    // nombres casi iguales (una letra de diferencia: acentos raros, erratas)
+    for (const n of ns) {
+      if (n.length < 7) continue;
+      const lim = n.length >= 12 ? 2 : 1;
+      const h = list.filter((p) => lev(p.nn, n) <= lim);
+      if (h.length === 1) return h[0].a;
+    }
+    // jugador que ha cambiado de club: nombre completo único en toda la liga
+    for (const n of ns) {
+      if (n.split(' ').length < 2) continue;
+      const h = all.filter((p) => p.nn === n);
+      if (h.length === 1) return h[0].a;
+    }
     return null;
   };
 }
@@ -243,21 +277,26 @@ export function makeMatcher(players) {
 // Puntos de un partido: devuelve { pl: {apiId: {p, ...}}, coach: {code: pts}, unmatched: [...] }
 export function scoreMatch({ match, summary, teamCode, matcher }) {
   const teams = parseSummary(summary, match);
-  const pl = {}, unmatched = [];
+  const pl = {}, unmatched = [], um = [];
   for (const [tid, list] of Object.entries(teams)) {
     const side = match.h.id === tid ? match.h : match.a;
     const code = teamCode(side.n);
     if (!code) { unmatched.push(`equipo ${side.n}`); continue; }
     for (const p of list) {
       if (!p.played && !p.goals && !p.assists && !p.yellow && !p.red && !p.ownGoals) continue;
-      const api = matcher(code, p.names);
-      if (api == null) { unmatched.push(`${code}:${p.names[0]}`); continue; }
+      const api = matcher(code, p.names, p.espnId);
+      if (api == null) {
+        unmatched.push(`${code}:${p.names[0]} (ESPN ${p.espnId})`);
+        // se guardan sus estadísticas para acreditarle los puntos cuando se pueda emparejar
+        um.push({ code, espnId: p.espnId, names: p.names.filter(Boolean), pos: p.pos || 'MED', s: { goals: p.goals, assists: p.assists, penScored: p.penScored, penMissed: p.penMissed, yellow: p.yellow, red: p.red, ownGoals: p.ownGoals, minutes: p.minutes, cleanSheet: p.cleanSheet } });
+        continue;
+      }
       const pos = p.pos || 'MED';
       const posReal = null;
       pl[api] = { pts: null, pos, ...p };
     }
   }
-  return { pl, unmatched, teams };
+  return { pl, unmatched, um, teams };
 }
 
 // Aplica la posición real del catálogo para puntuar.
@@ -268,4 +307,16 @@ export function finalizePoints(res, catalogByApi) {
     out[api] = playerPoints(s, pos);
   }
   return out;
+}
+
+// Reintenta emparejar los jugadores pendientes. items: [{m, r, code, espnId, names, pos, s}]
+// Devuelve { resolved: [{api, r, pts, item}], left: [...] }
+export function resolveUnmatched(items, matcher, catalogByApi) {
+  const resolved = [], left = [];
+  for (const it of items || []) {
+    const api = matcher(it.code, it.names || [], it.espnId);
+    if (api == null || !catalogByApi[api]) { left.push(it); continue; }
+    resolved.push({ api, r: it.r, pts: playerPoints(it.s, catalogByApi[api].p || it.pos), item: it });
+  }
+  return { resolved, left };
 }

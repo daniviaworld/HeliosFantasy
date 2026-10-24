@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import { norm } from './lib.mjs';
 import { planSettle, planBonus, planIdeal, payIdeal } from './rounds-lib.mjs';
-import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints } from './results-lib.mjs';
+import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -35,7 +35,10 @@ else cat = JSON.parse(fs.readFileSync(process.env.CATALOG || 'catalog-preview.js
 const wanted = JSON.parse(fs.readFileSync(new URL('./laliga-teams.json', import.meta.url), 'utf8'));
 const teamCode = makeTeamMap(wanted, cat.teams);
 const byApi = {}; for (const p of cat.players) byApi[p.a] = p;
-const matcher = makeMatcher(cat.players);
+let aliases = {};
+try { aliases = JSON.parse(fs.readFileSync(new URL('./aliases.json', import.meta.url), 'utf8')); } catch (e) { aliases = {}; }
+delete aliases._ayuda;
+const matcher = makeMatcher(cat.players, aliases);
 
 const fxSnap = db ? await db.doc('catalog/fixtures').get() : null;
 const prevFx = fxSnap && fxSnap.exists ? fxSnap.data() : null;
@@ -135,6 +138,13 @@ console.log(`Calendario: ${matches.length} partidos (${calls} consultas) · jorn
   if (odd.length) console.warn(`AVISO: jornadas con un número raro de partidos (esperado ${Math.floor(cat.teams.length / 2)}): ${odd.map((r) => 'J' + r + '=' + per[r]).join(', ')}`);
 }
 
+// jugadores de ESPN que aún no se han podido emparejar con el catálogo (se les acreditan los puntos cuando se pueda)
+const uRef = db ? db.doc('points/unmatched') : null;
+const uSnap = uRef ? await uRef.get() : null;
+let umItems = uSnap && uSnap.exists ? ((uSnap.data() || {}).items || []) : [];
+if (FULL) umItems = [];
+let umChanged = false;
+
 // 2) puntos de los partidos terminados que aún no están procesados
 let processed = 0;
 for (const m of matches) {
@@ -147,6 +157,7 @@ for (const m of matches) {
   const top = Object.entries(pts).sort((x, y) => y[1] - x[1]).slice(0, DRY ? 10 : 4);
   for (const [api, p] of top) { const s = res.pl[api]; console.log(`   ${String(p).padStart(3)}  ${byApi[api].n} (${byApi[api].t} ${byApi[api].p}) · ${s.minutes}' G${s.goals} A${s.assists} T${s.yellow}/${s.red}${s.cleanSheet ? ' PC' : ''}`); }
   if (res.unmatched.length) console.log('   sin emparejar:', res.unmatched.join(', '));
+  for (const it of res.um || []) { umItems.push({ m: m.id, r: m.r, ...it }); umChanged = true; }
   for (const [api, p] of Object.entries(pts)) {
     const x = (season.pl[api] = season.pl[api] || { j: {}, t: 0 });
     x.j[m.r] = (x.j[m.r] || 0) + p;
@@ -161,6 +172,18 @@ for (const m of matches) {
   processed++;
 }
 console.log(`\nPartidos nuevos procesados: ${processed}`);
+{
+  const { resolved, left } = resolveUnmatched(umItems, matcher, byApi);
+  for (const x of resolved) {
+    const e = (season.pl[x.api] = season.pl[x.api] || { j: {}, t: 0 });
+    e.j[x.r] = (e.j[x.r] || 0) + x.pts;
+    e.t = Object.values(e.j).reduce((a, b) => a + b, 0);
+    console.log(`Emparejado a posteriori: ${x.item.names[0]} (${x.item.code}) → ${byApi[x.api].n}: ${x.pts} pts en la jornada ${x.r}`);
+    processed++; umChanged = true;
+  }
+  umItems = left;
+  if (left.length) console.log(`Jugadores sin emparejar pendientes: ${left.length} → ` + left.map((x) => `${x.code}:${x.names[0]}(${x.espnId})`).join(', ') + '. Añádelos a scripts/aliases.json con su id de ESPN.');
+}
 
 // 2b) puntos PROVISIONALES de los partidos en juego (no se suman a la temporada; la app los muestra "en directo")
 const liveM = {};
@@ -183,6 +206,7 @@ if (size > 900 * 1024) { console.error('Datos demasiado grandes'); process.exit(
 const ts = admin.firestore.FieldValue.serverTimestamp();
 await db.doc('catalog/fixtures').set({ season: cat.season, round, offset, src: usedFD ? 'fd' : 'espn', matches: compact, updatedAt: ts });
 if (processed || !sSnap.exists) await db.doc('points/season').set({ ...season, updatedAt: ts });
+if (umChanged || FULL) await uRef.set({ items: umItems.slice(-200), updatedAt: ts });
 {
   const lref = db.doc('points/live'), prev = await lref.get();
   const had = prev.exists && Object.keys((prev.data() || {}).m || {}).length > 0;

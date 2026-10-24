@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { playerPoints, coachPoints, parseScoreboard, assignRounds, currentRound, makeTeamMap, makeMatcher, scoreMatch, finalizePoints } from './results-lib.mjs';
+import { playerPoints, coachPoints, parseScoreboard, assignRounds, currentRound, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, resolveUnmatched } from './results-lib.mjs';
 const wanted = JSON.parse(fs.readFileSync(new URL('./laliga-teams.json', import.meta.url), 'utf8'));
 const teams = [{ i: 529, c: 'BAR', n: 'Barcelona' }, { i: 543, c: 'BET', n: 'Real Betis' }, { i: 541, c: 'REA', n: 'Real Madrid' }, { i: 530, c: 'ATL', n: 'Atlético de Madrid' }];
 const players = [
@@ -71,6 +71,33 @@ const m0 = { id: '12', h: { id: '529', n: 'Barcelona', s: 1 }, a: { id: '543', n
 const r0 = scoreMatch({ match: m0, summary: sum0, teamCode: tc, matcher });
 const p0 = finalizePoints(r0, Object.fromEntries(players.map((p) => [p.a, p])));
 assert.equal(p0[2], 2 + 4, 'defensa con portería a cero'); assert.equal(p0[3], 2 + 4, 'portero con portería a cero');
+// emparejado ampliado
+{
+  const P2 = [
+    { a: 101, n: 'Vinícius José Paixão de Oliveira Júnior', t: 'RMA', p: 'DEL' },
+    { a: 102, n: 'Robert Lewandowski', t: 'BAR', p: 'DEL' },
+    { a: 103, n: 'Jules Koundé', t: 'BAR', p: 'DEF' },
+    { a: 104, n: 'Nico Williams', t: 'ATH', p: 'DEL' },
+    { a: 105, n: 'Iñaki Williams', t: 'ATH', p: 'DEL' },
+    { a: 106, n: 'Ferran Torres', t: 'BAR', p: 'DEL' },
+  ];
+  const m = makeMatcher(P2, { 777: 105 });
+  assert.equal(m('BAR', ['robert lewandowsky']), 102, 'una letra de diferencia');
+  assert.equal(m('BAR', ['lewandowski']), 102, 'solo apellido único');
+  assert.equal(m('ATH', ['williams']), null, 'apellido repetido no se adivina');
+  assert.equal(m('ATH', ['williams'], 777), 105, 'el alias por id de ESPN manda');
+  assert.equal(m('RMA', ['jules kounde']), 103, 'jugador que ha cambiado de club: nombre completo único');
+  assert.equal(m('BAR', ['x y z']), null);
+  // pendientes
+  const cat = Object.fromEntries(P2.map((p) => [p.a, p]));
+  const items = [{ m: '1', r: 3, code: 'ATH', espnId: '999', names: ['nico williams'], pos: 'MED', s: { goals: 1, minutes: 90 } }, { m: '1', r: 3, code: 'ATH', espnId: '555', names: ['williams'], pos: 'DEL', s: { goals: 1, minutes: 90 } }];
+  const rs = resolveUnmatched(items, m, cat);
+  assert.equal(rs.resolved.length, 1, 'se resuelve el que ya se puede emparejar');
+  assert.equal(rs.resolved[0].api, 104); assert.equal(rs.resolved[0].pts, 4 + 2, 'puntos con la posición real del catálogo (DEL: gol 4 + minutos 2)');
+  assert.equal(rs.left.length, 1, 'el ambiguo sigue pendiente');
+  const rs2 = resolveUnmatched(rs.left, makeMatcher(P2, { 555: 105 }), cat);
+  assert.equal(rs2.resolved.length, 1, 'al añadir el alias se resuelve');
+}
 console.log('Todas las pruebas de resultados pasan.');
 // jornada de fin de semana + aplazado
 {

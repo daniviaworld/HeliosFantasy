@@ -28,6 +28,18 @@ export const protectedUntil = (pm, a) => {
 
 const has = (arr, a) => (arr || []).map(String).includes(String(a));
 
+// Quita al jugador de una plantilla (alineación, rol, venta, capitán, entrenador, protección)
+export function dropPlayer(s, a) {
+  s.squad = (s.squad || []).filter((x) => String(x) !== String(a));
+  for (const pos of Object.keys(s.lineup || {})) s.lineup[pos] = (s.lineup[pos] || []).map((x) => (x != null && String(x) === String(a) ? null : x));
+  if (s.role) delete s.role[a];
+  if (s.selling) delete s.selling[a];
+  if (s.pm) delete s.pm[a];
+  if (s.cap != null && String(s.cap) === String(a)) s.cap = null;
+  if (s.coach != null && String(s.coach) === String(a)) s.coach = s.squad.find((x) => x < 0) ?? null;
+  s.saved = false;
+}
+
 // Pasa el jugador `a` de `from` a `to` por `price`. Devuelve nada; modifica M.
 export function transfer(M, a, from, to, price, now, newClause, lockMs = LOCK_MS) {
   const s = M[from], b = M[to];
@@ -61,23 +73,25 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
   const lockMs = lockMsOf(rules), cMult = clauseMultOf(rules), ttl = offerTtlOf(rules), cMax = clubMaxOf(rules);
   const fail = (d, why, notify = true) => {
     dealUpdates[d.id] = { status: 'failed', note: why, doneAt: now };
-    if (notify && M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, a: d.a, x: `${d.type === 'clause' ? 'Clausulazo' : d.type === 'swap' ? 'Intercambio' : 'Oferta'} por ${pname(d.a)} no realizado: ${why}.` });
+    if (notify && M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, a: d.a, x: `${d.type === 'clause' ? 'Clausulazo' : d.type === 'swap' ? 'Intercambio' : d.type === 'loan' ? 'Cesión' : 'Oferta'} por ${pname(d.a)} no realizado: ${why}.` });
   };
   const ordered = [...deals].sort((x, y) => (x.ts || 0) - (y.ts || 0));
   for (const d of ordered) {
     const a = d.a;
-    if (d.status === 'pending' && (d.type === 'offer' || d.type === 'swap')) {
+    if (d.status === 'pending' && (d.type === 'offer' || d.type === 'swap' || d.type === 'loan')) {
       if (now - (d.ts || 0) > ttl) {
         dealUpdates[d.id] = { status: 'expired', note: 'caducada', doneAt: now };
-        if (M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, a: a, x: `Tu ${d.type === 'swap' ? 'intercambio' : 'oferta'} por ${pname(a)} caducó sin respuesta.` });
+        if (M[d.buyer]) news.push({ k: 'mercado', to: d.buyer, a: a, x: `Tu ${d.type === 'swap' ? 'intercambio' : d.type === 'loan' ? 'petición de cesión' : 'oferta'} por ${pname(a)} caducó sin respuesta.` });
       }
       continue;
     }
-    const run = (d.status === 'pending' && d.type === 'clause') || (d.status === 'accepted' && (d.type === 'offer' || d.type === 'swap'));
+    const run = (d.status === 'pending' && d.type === 'clause') || (d.status === 'accepted' && (d.type === 'offer' || d.type === 'swap' || d.type === 'loan'));
     if (!run) continue;
     const S = M[d.seller], B = M[d.buyer];
     if (!S || !B) { fail(d, 'el mánager ya no está en la liga', false); continue; }
     if (!has(S.squad, a)) { fail(d, 'el jugador ya no es de ' + who(d.seller)); continue; }
+    if (S.ln && S.ln[a]) { fail(d, 'el jugador está cedido y no se puede traspasar'); continue; }
+    if (d.type === 'swap' && B.ln && B.ln[d.give]) { fail(d, 'tu jugador ofrecido está cedido'); continue; }
     if (d.type === 'swap') {
       const g = d.give, cash = r2(Number(d.amount) || 0);
       if (g == null || !has(B.squad, g)) { fail(d, 'tu jugador del intercambio ya no está en tu plantilla'); continue; }
@@ -103,6 +117,23 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
     if ((B.squad || []).length >= MAX_SQUAD) { fail(d, `tu plantilla está completa (${MAX_SQUAD})`); continue; }
     if ((S.squad || []).length <= MIN_SQUAD) { fail(d, `${who(d.seller)} no puede quedarse con menos de ${MIN_SQUAD} jugadores`); continue; }
     if (cMax && base[a] && base[a].t && clubCount(B.squad, base, base[a].t) >= cMax) { fail(d, `límite de ${cMax} jugadores por club en esta liga`); continue; }
+    if (d.type === 'loan') {
+      const days = [7, 14, 21, 28].includes(Number(d.days)) ? Number(d.days) : 7, fee = r2(Number(d.amount) || 0);
+      if (fee < 0) { fail(d, 'importe no válido'); continue; }
+      if (B.cash + 1e-9 < fee) { fail(d, 'saldo insuficiente'); continue; }
+      const until = now + days * 24 * H, sp = S.pm && S.pm[a] ? { ...S.pm[a] } : null;
+      transfer(M, a, d.seller, d.buyer, fee, now, r2(val(a) * cMult), lockMs);
+      B.pm = { ...(B.pm || {}), [a]: { l: until, c: r2(val(a) * cMult) } };
+      B.ln = { ...(B.ln || {}), [a]: { f: d.seller, u: until } };
+      S.lo = { ...(S.lo || {}), [a]: { t: d.buyer, u: until, pm: sp } };
+      changed.add(d.seller); changed.add(d.buyer);
+      dealUpdates[d.id] = { status: 'done', note: `${days} días · ${fmt(fee)}`, price: fee, doneAt: now };
+      const fin = new Date(until).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+      news.push({ k: 'fichaje', to: d.seller, a, x: `Cedes a ${pname(a)} a ${who(d.buyer)} ${days} días por ${fmt(fee)}. Vuelve el ${fin}.` });
+      news.push({ k: 'fichaje', to: d.buyer, a, x: `Recibes cedido a ${pname(a)} de ${who(d.seller)} por ${fmt(fee)}. Lo devuelves el ${fin}.` });
+      news.push({ k: 'fichaje', to: null, a, x: `${who(d.seller)} cede a ${pname(a)} a ${who(d.buyer)} ${days} días (${fmt(fee)}).` });
+      continue;
+    }
     let price, newClause;
     if (d.type === 'clause') {
       if (!rules.clause) { fail(d, 'los clausulazos están desactivados en esta liga'); continue; }
@@ -132,7 +163,55 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
     m.pl = m.squad.length;
     m.val = r2(m.squad.reduce((s, a) => s + val(a), 0));
     m.rev = (m.rev || 0) + 1;
-    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup || {}, role: m.role || {}, selling: m.selling || {}, pm: m.pm || {}, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach, cap: m.cap == null ? null : m.cap };
+    memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup || {}, role: m.role || {}, selling: m.selling || {}, pm: m.pm || {}, ln: m.ln || {}, lo: m.lo || {}, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach, cap: m.cap == null ? null : m.cap };
   }
   return { memberUpdates, dealUpdates, news };
+}
+
+// Devuelve a su dueño los jugadores cedidos cuyo plazo ha terminado.
+// members: {uid:{name,squad,lineup,role,selling,pm,ln,lo,cap,coach,rev}}
+export function planLoans({ now, members, base = {}, values = {}, anon = false }) {
+  const M = JSON.parse(JSON.stringify(members));
+  const pname = (a) => (base[a] ? base[a].n : 'Jugador ' + a);
+  const val = (a) => (values[a] != null ? values[a] : base[a] ? base[a].v : 1);
+  const changed = new Set(), news = [];
+  for (const [ou, S] of Object.entries(M)) {
+    for (const [a, lo] of Object.entries(S.lo || {})) {
+      if (!(lo.u <= now)) continue;
+      const B = M[lo.t];
+      if (B) { if (has(B.squad, a)) dropPlayer(B, a); if (B.ln) delete B.ln[a]; changed.add(lo.t); news.push({ k: 'fichaje', to: lo.t, a: Number(a), x: `Termina la cesión de ${pname(a)}: vuelve con ${S.name || 'su dueño'}.` }); }
+      if (!has(S.squad, a)) { S.squad = [...(S.squad || []), Number(a)]; if (Number(a) < 0 && S.coach == null) S.coach = Number(a); if (lo.pm) S.pm = { ...(S.pm || {}), [a]: lo.pm }; }
+      delete S.lo[a]; S.saved = false; changed.add(ou);
+      news.push({ k: 'fichaje', to: ou, a: Number(a), x: `${pname(a)} vuelve a tu plantilla tras la cesión.` });
+    }
+    // cesiones recibidas cuyo dueño ya no está en la liga
+    for (const [a, ln] of Object.entries(S.ln || {})) {
+      if (!(ln.u <= now) || M[ln.f]) continue;
+      if (has(S.squad, a)) dropPlayer(S, a);
+      delete S.ln[a]; changed.add(ou);
+    }
+  }
+  const memberUpdates = {};
+  for (const uid of changed) {
+    const m = M[uid];
+    m.pl = m.squad.length;
+    m.val = r2(m.squad.reduce((s, a) => s + val(a), 0));
+    m.rev = (m.rev || 0) + 1;
+    memberUpdates[uid] = { squad: m.squad, lineup: m.lineup || {}, role: m.role || {}, selling: m.selling || {}, pm: m.pm || {}, ln: m.ln || {}, lo: m.lo || {}, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach, cap: m.cap == null ? null : m.cap };
+  }
+  return { memberUpdates, news };
+}
+
+// ¿Hay cesiones que devolver?
+export const loansDue = (members, now) => Object.values(members).some((m) => Object.values(m.lo || {}).some((l) => l.u <= now) || Object.values(m.ln || {}).some((l) => l.u <= now));
+
+// Devuelve las cesiones vencidas y después ejecuta los tratos pendientes.
+export function planAll({ now, members, deals, base, values = {}, rules = {}, anon = false }) {
+  const L = planLoans({ now, members, base, values, anon });
+  const M2 = {};
+  for (const [u, m] of Object.entries(members)) M2[u] = L.memberUpdates[u] ? { ...m, ...L.memberUpdates[u] } : m;
+  const D = planDeals({ now, members: M2, deals, base, values, rules, anon });
+  const memberUpdates = {};
+  for (const u of new Set([...Object.keys(L.memberUpdates), ...Object.keys(D.memberUpdates)])) memberUpdates[u] = { ...(L.memberUpdates[u] || {}), ...(D.memberUpdates[u] || {}) };
+  return { memberUpdates, dealUpdates: D.dealUpdates, news: [...L.news, ...D.news] };
 }
