@@ -36,3 +36,4 @@ jobs:
           FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
           FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.full && '1' || '' }}
+
