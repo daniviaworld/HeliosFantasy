@@ -6,8 +6,22 @@ export const FORMULA = {
   goal: { POR: 6, DEF: 6, MED: 5, DEL: 4, ENT: 0 },
   assist: 3, minutes60: 2, cleanSheet: 4, penScored: 3, penMissed: -2, yellow: -1, red: -3, ownGoal: -2,
 };
+// Reglas nuevas (goles en contra y puntos Helios): solo cuentan desde esta jornada, las anteriores no se tocan.
+export const V2_FROM = 11;
 export const COACH = { win: 5, draw: 2, loss: 0 };
 
+// Goles en contra (POR/DEF con >60': -1 por cada 2 encajados) y puntos Helios 0-4 (paradas, tiros a puerta, faltas recibidas, victoria).
+export function extras(s, pos) {
+  if (!s || !s.v2) return { conc: 0, hel: 0, cg: 0 };
+  const min = s.minutes || 0, cg = s.conceded | 0;
+  const conc = ((pos === 'POR' || pos === 'DEF') && min > 60) ? -Math.floor(cg / 2) : 0;
+  let h = 0;
+  const sv = s.saves | 0; if (pos === 'POR') h += sv >= 7 ? 3 : sv >= 5 ? 2 : sv >= 3 ? 1 : 0;
+  const sot = Math.max(0, (s.sot | 0) - (s.goals | 0)); h += sot >= 3 ? 2 : sot === 2 ? 1 : 0;
+  if ((s.fsuf | 0) >= 3) h += 1;
+  if (s.win && min >= 90) h += 1;
+  return { conc, hel: Math.max(0, Math.min(4, h)), cg };
+}
 export function playerPoints(s, pos) {
   const g = FORMULA.goal[pos] || 0;
   let p = 0;
@@ -18,17 +32,23 @@ export function playerPoints(s, pos) {
   p += (s.penScored || 0) * FORMULA.penScored + (s.penMissed || 0) * FORMULA.penMissed;
   p += (s.yellow || 0) * FORMULA.yellow + (s.red || 0) * FORMULA.red;
   p += (s.ownGoals || 0) * FORMULA.ownGoal;
+  const x = extras(s, pos); p += x.conc + x.hel;
   return p;
 }
 // Estadísticas de un jugador en un partido, en formato compacto para guardar (desglose de puntos en la app):
 // [minutos, goles, asistencias, penaltis marcados, penaltis fallados, amarillas, rojas, goles en propia, portería a cero]
+// Desde la jornada 11 se añaden 3 valores: [9] puntos por goles en contra, [10] puntos Helios, [11] goles encajados.
 export function statArr(s) {
-  return [s.minutes | 0, s.goals | 0, s.assists | 0, s.penScored | 0, s.penMissed | 0, s.yellow | 0, s.red | 0, s.ownGoals | 0, s.cleanSheet ? 1 : 0];
+  const a = [s.minutes | 0, s.goals | 0, s.assists | 0, s.penScored | 0, s.penMissed | 0, s.yellow | 0, s.red | 0, s.ownGoals | 0, s.cleanSheet ? 1 : 0];
+  if (s.v2) { const x = extras(s, s.pos); a.push(x.conc, x.hel, x.cg); }
+  return a;
 }
 // Suma dos filas de estadísticas (jugador con dos partidos en la misma jornada).
 export function addStat(a, b) {
   if (!a) return b.slice();
-  return a.map((x, i) => (i === 8 ? Math.max(x, b[i] || 0) : x + (b[i] || 0)));
+  const n = Math.max(a.length, b.length), o = [];
+  for (let i = 0; i < n; i++) o.push(i === 8 || i === 11 ? Math.max(a[i] || 0, b[i] || 0) : (a[i] || 0) + (b[i] || 0));
+  return o;
 }
 export function coachPoints(own, other) { return own > other ? COACH.win : own === other ? COACH.draw : COACH.loss; }
 
@@ -224,6 +244,9 @@ export function parseSummary(sum, match) {
         espnId: id, names, pos, minutes: Math.max(0, minutes), played: minutes > 0,
         goals, assists, penScored: st.penScored, penMissed: st.penMissed, yellow, red, ownGoals: Math.max(st.ownGoals, statVal(p, 'ownGoals')),
         cleanSheet: (conceded[tid] === 0),
+        v2: (match.r | 0) >= V2_FROM, conceded: conceded[tid] | 0,
+        saves: statVal(p, 'saves'), sot: statVal(p, 'shotsOnTarget'), fsuf: statVal(p, 'foulsSuffered'),
+        win: tid === String(match.h.id) ? match.h.s > match.a.s : match.a.s > match.h.s,
       });
     }
     teams[tid] = list;
@@ -307,7 +330,7 @@ export function scoreMatch({ match, summary, teamCode, matcher }) {
       if (api == null) {
         unmatched.push(`${code}:${p.names[0]} (ESPN ${p.espnId})`);
         // se guardan sus estadísticas para acreditarle los puntos cuando se pueda emparejar
-        um.push({ code, espnId: p.espnId, names: p.names.filter(Boolean), pos: p.pos || 'MED', s: { goals: p.goals, assists: p.assists, penScored: p.penScored, penMissed: p.penMissed, yellow: p.yellow, red: p.red, ownGoals: p.ownGoals, minutes: p.minutes, cleanSheet: p.cleanSheet } });
+        um.push({ code, espnId: p.espnId, names: p.names.filter(Boolean), pos: p.pos || 'MED', s: { goals: p.goals, assists: p.assists, penScored: p.penScored, penMissed: p.penMissed, yellow: p.yellow, red: p.red, ownGoals: p.ownGoals, minutes: p.minutes, cleanSheet: p.cleanSheet, v2: p.v2, conceded: p.conceded, saves: p.saves, sot: p.sot, fsuf: p.fsuf, win: p.win } });
         continue;
       }
       const pos = p.pos || 'MED';
@@ -323,6 +346,7 @@ export function finalizePoints(res, catalogByApi) {
   const out = {};
   for (const [api, s] of Object.entries(res.pl)) {
     const pos = (catalogByApi[api] && catalogByApi[api].p) || s.pos;
+    s.pos = pos;
     out[api] = playerPoints(s, pos);
   }
   return out;
@@ -335,6 +359,7 @@ export function resolveUnmatched(items, matcher, catalogByApi) {
   for (const it of items || []) {
     const api = matcher(it.code, it.names || [], it.espnId);
     if (api == null || !catalogByApi[api]) { left.push(it); continue; }
+    it.s.pos = catalogByApi[api].p || it.pos;
     resolved.push({ api, r: it.r, pts: playerPoints(it.s, catalogByApi[api].p || it.pos), item: it });
   }
   return { resolved, left };
