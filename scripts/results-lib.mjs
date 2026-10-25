@@ -384,3 +384,19 @@ export function parseInjuries(roster) {
   }
   return out;
 }
+
+// Respuesta de API-Football /injuries → { [idJugador]: {s, n} } con las bajas de partidos próximos (las ids son las del catálogo)
+export function parseApiInjuries(j, nowMs) {
+  const out = {}, best = {};
+  for (const r of (j && j.response) || []) {
+    const p = r && r.player; if (!p || p.id == null) continue;
+    const t = r.fixture && r.fixture.date ? +new Date(r.fixture.date) : NaN;
+    if (!isFinite(t) || t < nowMs - 36 * 3600e3) continue;
+    const reason = String(p.reason || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+    if (/suspen|red card|yellow card|card/i.test(reason)) continue; // las sanciones ya salen de las tarjetas
+    if (best[p.id] != null && best[p.id] <= t) continue;
+    best[p.id] = t;
+    out[p.id] = { s: /question|doubt/i.test(String(p.type || '')) ? 'Duda' : 'Out', n: reason };
+  }
+  return out;
+}

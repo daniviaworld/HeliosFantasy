@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import { norm } from './lib.mjs';
 import { planSettle, planBonus, planIdeal, payIdeal } from './rounds-lib.mjs';
-import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched, statArr, addStat , planSuspensions, parseInjuries } from './results-lib.mjs';
+import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched, statArr, addStat , planSuspensions, parseInjuries, parseApiInjuries } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -268,8 +268,26 @@ try {
           if (api != null) fresh[api] = { s: x.info.s, n: x.info.n, ...(x.info.ret ? { d: x.info.ret } : {}) };
         }
       }
-      if (teams.size >= 10 && okT >= teams.size - 2) { inj = fresh; injAt = +now; console.log('Lesionados según ESPN:', Object.keys(fresh).length, 'de', okT, 'equipos.'); }
-      else console.warn('ESPN no respondió con las plantillas; se mantienen las lesiones anteriores.');
+      console.log('Lesionados según ESPN:', Object.keys(fresh).length, 'de', okT, 'equipos.');
+      // API-Football publica las lesiones de LaLiga (ESPN no): sus ids de jugador son las del catálogo
+      let afOk = false;
+      const AFK = process.env.API_FOOTBALL_KEY;
+      if (AFK) {
+        try {
+          const yr = parseInt(String(cat.season || '').slice(0, 4), 10) || new Date().getUTCFullYear();
+          const r = await fetch(`https://v3.football.api-sports.io/injuries?league=140&season=${yr}`, { headers: { 'x-apisports-key': AFK } });
+          const j = await r.json();
+          const errs = j && j.errors, hasErr = Array.isArray(errs) ? errs.length > 0 : errs && Object.keys(errs).length > 0;
+          if (!r.ok || hasErr) console.warn('API-Football (lesiones):', r.status, JSON.stringify(errs || {}));
+          else {
+            const af = parseApiInjuries(j, +now); let n = 0;
+            for (const [id, v] of Object.entries(af)) { if (byApi[id]) { fresh[id] = v; n++; } }
+            afOk = true; console.log('Lesionados según API-Football:', n, `(de ${(j.response || []).length} registros, quedan ${r.headers.get('x-ratelimit-requests-remaining') || '?'} peticiones hoy)`);
+          }
+        } catch (e) { console.warn('API-Football (lesiones) falló:', e.message); }
+      } else console.log('Sin API_FOOTBALL_KEY: solo se usan las lesiones de ESPN.');
+      if (afOk || (teams.size >= 10 && okT >= teams.size - 2)) { inj = fresh; injAt = +now; }
+      else console.warn('Sin datos fiables de lesiones; se mantienen las anteriores.');
     }
     await aref.set({ sus, inj, injAt, updatedAt: ts });
     console.log('Disponibilidad guardada: sancionados', Object.keys(sus).length, '· lesionados', Object.keys(inj).length);
