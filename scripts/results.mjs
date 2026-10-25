@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import { norm } from './lib.mjs';
 import { planSettle, planBonus, planIdeal, payIdeal } from './rounds-lib.mjs';
-import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched, statArr, addStat } from './results-lib.mjs';
+import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched, statArr, addStat , planSuspensions, parseInjuries } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -234,6 +234,39 @@ try {
   const newI = planIdeal({ matches: compact, now: +now, season, base: byApi, have: ideal });
   if (Object.keys(newI).length) { ideal = { ...ideal, ...newI }; await iref.set({ r: ideal, updatedAt: ts }); console.log('11 ideal nuevos:', Object.keys(newI).join(', ')); }
 } catch (e) { console.error('Error en el 11 ideal:', e.message); }
+
+// 2d) sancionados y lesionados (points/avail): la app avisa al alinear
+try {
+  const aref = db.doc('points/avail'), as = await aref.get(), prevA = as.exists ? as.data() : {};
+  const injDue = !prevA.injAt || +now - prevA.injAt > 55 * 60 * 1000;
+  if (processed || FULL || !as.exists || injDue) {
+    // todas las jornadas con desglose (las tarjetas de toda la temporada)
+    const stats = {};
+    for (const [r, sd] of Object.entries(stR)) stats[r] = sd.pl || {};
+    const sd2 = await db.collection('points').get();
+    sd2.forEach((d) => { const m = /^s(\d+)$/.exec(d.id); if (m && !stats[m[1]]) stats[m[1]] = (d.data() || {}).pl || {}; });
+    const sus = planSuspensions({ matches: compact, stats, base: byApi });
+    let inj = prevA.inj || {}, injAt = prevA.injAt || 0;
+    if (injDue) {
+      const teams = new Map();
+      for (const m of compact) { if (m.h && m.hi) teams.set(m.h, m.hi); if (m.a && m.ai) teams.set(m.a, m.ai); }
+      const fresh = {}; let okT = 0;
+      for (const [code, id] of teams) {
+        const ros = await get(`${E}/teams/${id}/roster`); await sleep(250);
+        if (!ros) continue;
+        okT++;
+        for (const x of parseInjuries(ros)) {
+          const api = matcher(code, x.names, x.espnId);
+          if (api != null) fresh[api] = { s: x.info.s, n: x.info.n, ...(x.info.ret ? { d: x.info.ret } : {}) };
+        }
+      }
+      if (okT >= teams.size - 2) { inj = fresh; injAt = +now; console.log('Lesionados según ESPN:', Object.keys(fresh).length, 'de', okT, 'equipos.'); }
+      else console.warn('ESPN no respondió con las plantillas; se mantienen las lesiones anteriores.');
+    }
+    await aref.set({ sus, inj, injAt, updatedAt: ts });
+    console.log('Disponibilidad guardada: sancionados', Object.keys(sus).length, '· lesionados', Object.keys(inj).length);
+  }
+} catch (e) { console.error('Error en sanciones/lesiones:', e.message); }
 
 // 3) cierre de jornadas en el servidor: rellena los puntos de los mánagers que aún no han abierto la app
 try {

@@ -330,3 +330,57 @@ export function resolveUnmatched(items, matcher, catalogByApi) {
   }
   return { resolved, left };
 }
+
+// ---- Sanciones e lesiones (para avisar antes de alinear)
+// Sanción = el jugador vio roja en el último partido de su equipo, o con ese partido llegó a un múltiplo de 5 amarillas.
+// stats: { ronda: { api: statArr } }  matches: [{id,d,h,a,st,r}]  base: { api: {t} }
+export function planSuspensions({ matches, stats, base }) {
+  const byTeam = {};
+  for (const m of matches || []) {
+    if (!m || !m.h || !m.a || m.st === 'ppd') continue;
+    for (const t of [m.h, m.a]) (byTeam[t] = byTeam[t] || []).push(m);
+  }
+  const info = {};
+  for (const [t, ms] of Object.entries(byTeam)) {
+    ms.sort((x, y) => +new Date(x.d) - +new Date(y.d));
+    const done = ms.filter((m) => m.st === 'post'), pend = ms.filter((m) => m.st !== 'post');
+    if (done.length && pend.length) info[t] = { last: done[done.length - 1], next: pend[0] };
+  }
+  const apis = new Set();
+  for (const pl of Object.values(stats || {})) for (const a of Object.keys(pl || {})) apis.add(a);
+  const out = {};
+  for (const a of apis) {
+    const t = base[a] && base[a].t, inf = t && info[t];
+    if (!inf) continue;
+    const lastR = inf.last.r;
+    let y = 0;
+    for (const [r, pl] of Object.entries(stats)) if (+r <= lastR && pl[a]) y += pl[a][5] | 0;
+    const row = (stats[lastR] || {})[a];
+    if (!row) continue;
+    if ((row[6] | 0) > 0) out[a] = { k: 'roja', r: inf.next.r, d: inf.next.d };
+    else if ((row[5] | 0) > 0 && y > 0 && y % 5 === 0) out[a] = { k: 'amarillas', r: inf.next.r, d: inf.next.d, y };
+  }
+  return out;
+}
+// Datos de lesión de un jugador de la plantilla de ESPN
+export function injuryInfo(i) {
+  if (!i) return null;
+  const det = i.details || {};
+  const s = String(i.status || (i.type && (i.type.description || i.type.name)) || 'Lesionado');
+  const n = String(i.shortComment || i.longComment || det.detail || det.type || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+  const ret = det.returnDate || i.returnDate || null;
+  return { s, n, ret };
+}
+// Plantilla de ESPN → jugadores con lesión activa: [{espnId, names, info}]
+export function parseInjuries(roster) {
+  const flat = [];
+  for (const x of (roster && roster.athletes) || []) { if (x && Array.isArray(x.items)) flat.push(...x.items); else flat.push(x); }
+  const out = [];
+  for (const a of flat) {
+    if (!a || !Array.isArray(a.injuries) || !a.injuries.length) continue;
+    const info = injuryInfo(a.injuries[0]);
+    if (!info) continue;
+    out.push({ espnId: a.id != null ? String(a.id) : null, names: [norm(a.fullName || ''), norm(a.displayName || '')].filter(Boolean), info });
+  }
+  return out;
+}
