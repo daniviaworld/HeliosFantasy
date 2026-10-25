@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "sync": "node sync-players.mjs",
-    "test": "node test-lib.mjs && node test-market.mjs && node test-results.mjs && node test-deals.mjs && node test-rounds.mjs"
+    "test": "node test-lib.mjs && node test-market.mjs && node test-results.mjs && node test-deals.mjs && node test-rounds.mjs && node test-marketrun.mjs"
   },
   "dependencies": {
     "csv-parse": "5.5.6",

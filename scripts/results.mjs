@@ -307,7 +307,7 @@ try {
     const merged = {};
     for (const [uid, m] of Object.entries(members)) merged[uid] = { ...m, rp: out[uid] ? out[uid].rp : (m.rp || {}) };
     const bon = planBonus({ matches: compact, members: merged, bonus: +rules.bonus || 0 });
-    const fmtM = (x) => x.toFixed(2).replace('.', ',') + ' M';
+    const fmtM = (x) => String(Math.round(x * 1e6)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
     const withB = {}; for (const [uid, m] of Object.entries(merged)) withB[uid] = bon[uid] ? { ...m, cash: bon[uid].cash } : m;
     const idl = payIdeal({ members: withB, ideal, per: +rules.ideal || 0 });
     for (const uid of new Set([...Object.keys(out), ...Object.keys(bon), ...Object.keys(idl)])) {

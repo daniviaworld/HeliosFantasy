@@ -45,7 +45,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
   const nameOf = (uid) => (M[uid] ? M[uid].name : 'Un mánager');
   const who = (uid) => (anon ? 'Un mánager' : nameOf(uid));
   const pname = (a) => (base[a] ? base[a].n : 'Jugador ' + a);
-  const fmt = (x) => x.toFixed(2).replace('.', ',') + ' M';
+  const fmt = (x) => String(Math.round(x * 1e6)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
 
   const ownerOf = (a) => Object.keys(M).find((u) => (M[u].squad || []).map(String).includes(String(a)));
   const listings = [];

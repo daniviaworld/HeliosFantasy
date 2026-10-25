@@ -104,7 +104,7 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
   const M = JSON.parse(JSON.stringify(members));
   const val = (a) => (values[a] != null ? values[a] : base[a] ? base[a].v : 1);
   const pname = (a) => (base[a] ? base[a].n : 'Jugador ' + a);
-  const fmt = (x) => x.toFixed(2).replace('.', ',') + ' M';
+  const fmt = (x) => String(Math.round(x * 1e6)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
   const nameOf = (u) => (M[u] ? M[u].name : 'Un mánager');
   const who = (u) => (anon ? 'Un mánager' : nameOf(u));
   const changed = new Set(), news = [], dealUpdates = {}, clauseRecs = [];
