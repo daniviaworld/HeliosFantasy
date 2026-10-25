@@ -248,8 +248,16 @@ try {
     const sus = planSuspensions({ matches: compact, stats, base: byApi });
     let inj = prevA.inj || {}, injAt = prevA.injAt || 0;
     if (injDue) {
+      // los ids de equipo del calendario pueden ser de football-data.org: los de ESPN salen de su propia lista
       const teams = new Map();
-      for (const m of compact) { if (m.h && m.hi) teams.set(m.h, m.hi); if (m.a && m.ai) teams.set(m.a, m.ai); }
+      const tl = await get(`${E}/teams`);
+      const tlist = (tl && tl.sports && tl.sports[0] && tl.sports[0].leagues && tl.sports[0].leagues[0] && tl.sports[0].leagues[0].teams) || [];
+      for (const t of tlist) {
+        const tm = t && t.team; if (!tm || !tm.id) continue;
+        const code = teamCode(tm.displayName || tm.name || '') || teamCode(tm.shortDisplayName || '');
+        if (code) teams.set(code, tm.id);
+      }
+      console.log('Equipos de ESPN para lesiones:', teams.size);
       const fresh = {}; let okT = 0;
       for (const [code, id] of teams) {
         const ros = await get(`${E}/teams/${id}/roster`); await sleep(250);
@@ -260,7 +268,7 @@ try {
           if (api != null) fresh[api] = { s: x.info.s, n: x.info.n, ...(x.info.ret ? { d: x.info.ret } : {}) };
         }
       }
-      if (okT >= teams.size - 2) { inj = fresh; injAt = +now; console.log('Lesionados según ESPN:', Object.keys(fresh).length, 'de', okT, 'equipos.'); }
+      if (teams.size >= 10 && okT >= teams.size - 2) { inj = fresh; injAt = +now; console.log('Lesionados según ESPN:', Object.keys(fresh).length, 'de', okT, 'equipos.'); }
       else console.warn('ESPN no respondió con las plantillas; se mantienen las lesiones anteriores.');
     }
     await aref.set({ sus, inj, injAt, updatedAt: ts });
