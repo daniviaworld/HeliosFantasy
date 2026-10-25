@@ -54,7 +54,13 @@ export function parseScoreboard(json) {
     const home = c.competitors.find((x) => x.homeAway === 'home'), away = c.competitors.find((x) => x.homeAway === 'away');
     if (!home || !away) continue;
     const t = (e.status && e.status.type) || (c.status && c.status.type) || {};
+    const stt = e.status || c.status || {};
+    let min = null;
+    if (/HALF/i.test(t.name || '') && !/FIRST|SECOND|2ND|1ST/i.test(t.name || '')) min = 45;
+    else if (typeof stt.clock === 'number' && stt.clock > 0) min = Math.floor(stt.clock / 60) + (stt.clock % 60 ? 1 : 0);
+    else { const mm = /(\d+)(?:\s*'?\s*\+\s*(\d+))?/.exec(stt.displayClock || ''); if (mm) min = +mm[1] + (+mm[2] || 0); }
     out.push({
+      min,
       id: String(e.id), d: e.date,
       h: { id: String(home.team.id), n: home.team.displayName, s: +home.score || 0 },
       a: { id: String(away.team.id), n: away.team.displayName, s: +away.score || 0 },
@@ -203,8 +209,11 @@ export function parseSummary(sum, match) {
         if (e._sub.outName && nm.some((n) => n && (n === e._sub.outName || e._sub.outName.endsWith(n) || n.endsWith(e._sub.outName)))) outMin = e._sub.min;
       }
       let minutes = 0;
-      if (p.starter) minutes = p.subbedOut ? (outMin != null ? outMin : 55) : 90;
-      else if (p.subbedIn || statVal(p, 'subIns') > 0) minutes = 90 - (inMin != null ? inMin : 70);
+      // en directo solo cuentan los minutos transcurridos (nunca 90 si el partido sigue)
+      const live = match.st === 'in';
+      const el = live ? Math.min(90, Math.max(1, match.min != null ? match.min : 45)) : 90;
+      if (p.starter) minutes = p.subbedOut ? Math.min(el, outMin != null ? outMin : 55) : el;
+      else if (p.subbedIn || statVal(p, 'subIns') > 0) minutes = Math.max(0, el - (inMin != null ? inMin : 70));
       const pos = POSMAP[(a.position && a.position.abbreviation) || ''] || null;
       // los goles/asistencias/tarjetas de la plantilla (stats) respaldan a keyEvents si faltan
       const goals = Math.max(st.goals, statVal(p, 'totalGoals') - st.ownGoals * 0);
