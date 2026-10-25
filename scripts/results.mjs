@@ -238,7 +238,7 @@ try {
 // 2d) sancionados y lesionados (points/avail): la app avisa al alinear
 try {
   const aref = db.doc('points/avail'), as = await aref.get(), prevA = as.exists ? as.data() : {};
-  const injDue = !prevA.injAt || +now - prevA.injAt > 55 * 60 * 1000;
+  const injDue = FULL || !prevA.injAt || +now - prevA.injAt > 55 * 60 * 1000;
   if (processed || FULL || !as.exists || injDue) {
     // todas las jornadas con desglose (las tarjetas de toda la temporada)
     const stats = {};
