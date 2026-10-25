@@ -26,6 +26,45 @@ export const protectedUntil = (pm, a) => {
   return Math.max(e.l || 0, e.s || 0);
 };
 
+
+// ---- Clausulazos por semana (lunes a domingo, hora de España) y bloqueo antes de cada jornada
+export const CLAUSE_BLOCK_MS = 24 * H;  // desde 24 h antes del primer partido de la jornada hasta que empieza
+export const clauseGivenOf = (rules) => { const n = rules && +rules.clauseGiven; return n >= 1 ? Math.floor(n) : 0; };   // 0 = sin límite
+export const clauseTakenOf = (rules) => { const n = rules && +rules.clauseTaken; return n >= 1 ? Math.floor(n) : 0; };
+export const clauseLockOn = (rules) => !(rules && rules.clauseLock === false);
+// Lunes de esa semana como 'AAAA-MM-DD' (zona horaria de Madrid)
+export function weekKey(ts) {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).formatToParts(new Date(ts));
+  const g = (t) => f.find((x) => x.type === t).value;
+  const dow = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(g('weekday'));
+  const d = new Date(Date.UTC(+g('year'), +g('month') - 1, +g('day') - dow));
+  return d.toISOString().slice(0, 10);
+}
+// Inicio (ms) del primer partido de la próxima jornada, o 0 si no hay
+export function nextRoundStart(matches, now) {
+  const first = {};
+  for (const m of matches || []) {
+    if (!m || m.r == null || !m.d || m.st === 'ppd') continue;
+    const t = +new Date(m.d);
+    if (!(t > now)) continue;
+    if (first[m.r] == null || t < first[m.r]) first[m.r] = t;
+  }
+  const v = Object.values(first);
+  return v.length ? Math.min(...v) : 0;
+}
+// Si ahora no se puede clausurar, devuelve cuándo se reabre (inicio del primer partido); si se puede, 0
+export function clauseBlockedUntil(matches, now, rules) {
+  if (!clauseLockOn(rules)) return 0;
+  const t = nextRoundStart(matches, now);
+  return t && t - now <= CLAUSE_BLOCK_MS ? t : 0;
+}
+// Cuántos clausulazos ha hecho y recibido cada uno en la semana de `now`. log: [{wk,buyer,seller}]
+export function weekCounts(log, now) {
+  const wk = weekKey(now), given = {}, taken = {};
+  for (const r of log || []) { if (r.wk !== wk) continue; given[r.buyer] = (given[r.buyer] || 0) + 1; taken[r.seller] = (taken[r.seller] || 0) + 1; }
+  return { wk, given, taken };
+}
+
 const has = (arr, a) => (arr || []).map(String).includes(String(a));
 
 // Quita al jugador de una plantilla (alineación, rol, venta, capitán, entrenador, protección)
@@ -62,14 +101,16 @@ export function transfer(M, a, from, to, price, now, newClause, lockMs = LOCK_MS
 // members: {uid:{name,cash,squad,lineup,role,selling,pm,cap,coach,rev}}
 // deals: [{id,type:'clause'|'offer',buyer,seller,a,amount,status,ts}]
 // base: {a:{v,n}}   values: {a:valor actual del mercado}   rules: {clause:boolean}
-export function planDeals({ now, members, deals, base, values = {}, rules = {}, anon = false }) {
+export function planDeals({ now, members, deals, base, values = {}, rules = {}, anon = false, matches = [], clog = [] }) {
   const M = JSON.parse(JSON.stringify(members));
   const val = (a) => (values[a] != null ? values[a] : base[a] ? base[a].v : 1);
   const pname = (a) => (base[a] ? base[a].n : 'Jugador ' + a);
   const fmt = (x) => x.toFixed(2).replace('.', ',') + ' M';
   const nameOf = (u) => (M[u] ? M[u].name : 'Un mánager');
   const who = (u) => (anon ? 'Un mánager' : nameOf(u));
-  const changed = new Set(), news = [], dealUpdates = {};
+  const changed = new Set(), news = [], dealUpdates = {}, clauseRecs = [];
+  const wc = weekCounts(clog, now), cGiven = clauseGivenOf(rules), cTaken = clauseTakenOf(rules);
+  const blockedAt = clauseBlockedUntil(matches, now, rules);
   const lockMs = lockMsOf(rules), cMult = clauseMultOf(rules), ttl = offerTtlOf(rules), cMax = clubMaxOf(rules);
   const fail = (d, why, notify = true) => {
     dealUpdates[d.id] = { status: 'failed', note: why, doneAt: now };
@@ -137,6 +178,9 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
     let price, newClause;
     if (d.type === 'clause') {
       if (!rules.clause) { fail(d, 'los clausulazos están desactivados en esta liga'); continue; }
+      if (blockedAt) { fail(d, `los clausulazos están cerrados hasta que empiece la jornada (${new Date(blockedAt).toLocaleString('es-ES', { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' })})`); continue; }
+      if (cGiven && (wc.given[d.buyer] || 0) >= cGiven) { fail(d, `ya has hecho ${cGiven === 1 ? 'tu clausulazo' : 'tus ' + cGiven + ' clausulazos'} de esta semana`); continue; }
+      if (cTaken && (wc.taken[d.seller] || 0) >= cTaken) { fail(d, `${who(d.seller)} ya ha recibido ${cTaken === 1 ? 'el máximo de 1 clausulazo' : 'el máximo de ' + cTaken + ' clausulazos'} esta semana`); continue; }
       const until = protectedUntil(S.pm, a);
       if (until > now) { fail(d, 'el jugador está protegido'); continue; }
       price = clauseOf(S.pm, a, val(a), cMult);
@@ -151,6 +195,10 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
     transfer(M, a, d.seller, d.buyer, price, now, newClause, lockMs);
     changed.add(d.seller); changed.add(d.buyer);
     dealUpdates[d.id] = { status: 'done', note: fmt(price), price, doneAt: now };
+    if (d.type === 'clause') {
+      wc.given[d.buyer] = (wc.given[d.buyer] || 0) + 1; wc.taken[d.seller] = (wc.taken[d.seller] || 0) + 1;
+      clauseRecs.push({ ts: now, wk: wc.wk, buyer: d.buyer, buyerName: nameOf(d.buyer), seller: d.seller, sellerName: nameOf(d.seller), a, pname: pname(a), price });
+    }
     const how = d.type === 'clause' ? 'paga la cláusula de' : 'ficha a';
     news.push({ k: 'fichaje', to: d.seller, x: d.type === 'clause' ? `${who(d.buyer)} paga la cláusula de ${pname(a)}: ${fmt(price)}.` : `Vendes a ${pname(a)} a ${who(d.buyer)} por ${fmt(price)}.` });
     news.push({ k: 'fichaje', to: d.buyer, a: a, x: `Fichas a ${pname(a)} de ${who(d.seller)} por ${fmt(price)}. Protegido ${Math.round(lockMs / 24 / H)} días.` });
@@ -165,7 +213,7 @@ export function planDeals({ now, members, deals, base, values = {}, rules = {}, 
     m.rev = (m.rev || 0) + 1;
     memberUpdates[uid] = { cash: m.cash, squad: m.squad, lineup: m.lineup || {}, role: m.role || {}, selling: m.selling || {}, pm: m.pm || {}, ln: m.ln || {}, lo: m.lo || {}, saved: m.saved, pl: m.pl, val: m.val, rev: m.rev, coach: m.coach == null ? null : m.coach, cap: m.cap == null ? null : m.cap };
   }
-  return { memberUpdates, dealUpdates, news };
+  return { memberUpdates, dealUpdates, news, clauseRecs };
 }
 
 // Devuelve a su dueño los jugadores cedidos cuyo plazo ha terminado.
@@ -206,12 +254,12 @@ export function planLoans({ now, members, base = {}, values = {}, anon = false }
 export const loansDue = (members, now) => Object.values(members).some((m) => Object.values(m.lo || {}).some((l) => l.u <= now) || Object.values(m.ln || {}).some((l) => l.u <= now));
 
 // Devuelve las cesiones vencidas y después ejecuta los tratos pendientes.
-export function planAll({ now, members, deals, base, values = {}, rules = {}, anon = false }) {
+export function planAll({ now, members, deals, base, values = {}, rules = {}, anon = false, matches = [], clog = [] }) {
   const L = planLoans({ now, members, base, values, anon });
   const M2 = {};
   for (const [u, m] of Object.entries(members)) M2[u] = L.memberUpdates[u] ? { ...m, ...L.memberUpdates[u] } : m;
-  const D = planDeals({ now, members: M2, deals, base, values, rules, anon });
+  const D = planDeals({ now, members: M2, deals, base, values, rules, anon, matches, clog });
   const memberUpdates = {};
   for (const u of new Set([...Object.keys(L.memberUpdates), ...Object.keys(D.memberUpdates)])) memberUpdates[u] = { ...(L.memberUpdates[u] || {}), ...(D.memberUpdates[u] || {}) };
-  return { memberUpdates, dealUpdates: D.dealUpdates, news: [...L.news, ...D.news] };
+  return { memberUpdates, dealUpdates: D.dealUpdates, news: [...L.news, ...D.news], clauseRecs: D.clauseRecs };
 }

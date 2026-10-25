@@ -13,6 +13,8 @@ if (!cat.exists) { console.error('No hay catálogo todavía.'); process.exit(1);
 const base = {};
 for (const p of cat.data().players) base[p.a] = p;
 
+const fxs = await db.collection('catalog').doc('fixtures').get();
+const matches = fxs.exists ? (fxs.data().matches || []) : [];
 const leagues = await db.collection('leagues').get();
 let done = 0, leaguesWith = 0;
 for (const L of leagues.docs) {
@@ -29,8 +31,11 @@ for (const L of leagues.docs) {
     leaguesWith++;
     const st = await ref.collection('market').doc('state').get();
     const values = st.exists ? (st.data().values || {}) : {};
-    const r = planAll({ now, members, deals, base, values, rules: data.rules || {}, anon: !!(data.rules && data.rules.anon) });
+    const clSnap = await ref.collection('clausulazos').get();
+    const clog = []; clSnap.forEach((d) => clog.push(d.data()));
+    const r = planAll({ now, members, deals, base, values, rules: data.rules || {}, anon: !!(data.rules && data.rules.anon), matches, clog });
     const batch = db.batch();
+    (r.clauseRecs || []).forEach((c) => batch.set(ref.collection('clausulazos').doc(), c));
     for (const [uid, upd] of Object.entries(r.memberUpdates)) batch.update(ref.collection('members').doc(uid), upd);
     for (const [id, upd] of Object.entries(r.dealUpdates)) batch.update(ref.collection('deals').doc(id), upd);
     r.news.forEach((n) => batch.set(ref.collection('news').doc(), { ts: now, k: n.k, to: n.to || null, a: n.a == null ? null : n.a, ...(n.tr ? { tr: n.tr } : {}), x: n.x }));
