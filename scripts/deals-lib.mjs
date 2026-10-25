@@ -40,16 +40,15 @@ export function weekKey(ts) {
   const d = new Date(Date.UTC(+g('year'), +g('month') - 1, +g('day') - dow));
   return d.toISOString().slice(0, 10);
 }
-// Inicio (ms) del primer partido de la próxima jornada, o 0 si no hay
+// Inicio (ms) de la próxima jornada que aún no ha empezado = su primer partido (contando los ya jugados), o 0 si no hay
 export function nextRoundStart(matches, now) {
   const first = {};
   for (const m of matches || []) {
     if (!m || m.r == null || !m.d || m.st === 'ppd') continue;
     const t = +new Date(m.d);
-    if (!(t > now)) continue;
     if (first[m.r] == null || t < first[m.r]) first[m.r] = t;
   }
-  const v = Object.values(first);
+  const v = Object.values(first).filter((t) => t > now);
   return v.length ? Math.min(...v) : 0;
 }
 // Si ahora no se puede clausurar, devuelve cuándo se reabre (inicio del primer partido); si se puede, 0
