@@ -91,6 +91,10 @@ const { teams, stats } = built;
 const players = built.players.concat(coaches);
 console.log(`Jugadores: ${stats.players} (con valor de mercado: ${stats.priced}, con precio por posición: ${stats.defaulted}, descartados: ${stats.skipped})`);
 console.log('Por equipo:', JSON.stringify(stats.perTeam));
+if (stats.dubious.length) {
+  console.log(`Precios dudosos (${stats.dubious.length}): no coincide el club o hay homónimos con valores muy distintos. Revísalos:`);
+  for (const d of stats.dubious.slice(0, 80)) console.log(`  · ${d.name} (${d.team}) → ${(d.value).toFixed(2)} M, club encontrado: ${d.matchedClub || '—'}, candidatos: ${d.candidates}`);
+}
 if (built.players.length < 300 && !process.env.FORCE) { console.error('Muy pocos jugadores. No se actualiza nada.'); process.exit(1); }
 
 const doc = { season: '2026/27', teams, players };

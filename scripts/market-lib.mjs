@@ -5,6 +5,25 @@ export const MIN_VALUE = 0.16;
 export const CPU_OFFERS = 3; // la liga hace hasta 3 ofertas por un jugador puesto a la venta
 const r2 = (x) => Math.round(x * 100) / 100;
 
+// ---- El valor sube o baja según los puntos de cada jornada terminada (solo a quien ha jugado)
+// 12 o más: +10 % · 8 a 11: +6 % · 5 a 7: +3 % · 1 a 4: sin cambio · 0 o -1: -3 % · -2 o menos: -6 %
+export function pointFactor(pts) {
+  const p = Number(pts);
+  if (!Number.isFinite(p)) return 0;
+  return p >= 12 ? 0.10 : p >= 8 ? 0.06 : p >= 5 ? 0.03 : p >= 1 ? 0 : p >= -1 ? -0.03 : -0.06;
+}
+// pl: { api: { j: { ronda: puntos } } } · devuelve { api: factor } acumulando las jornadas from+1 ... to
+export function roundMoves(pl, from, to) {
+  const factors = {};
+  for (const [a, e] of Object.entries(pl || {})) {
+    if (Number(a) < 0 || !e || !e.j) continue;
+    let f = 1;
+    for (let r = from + 1; r <= to; r++) if (e.j[r] != null) f *= 1 + pointFactor(e.j[r]);
+    if (Math.abs(f - 1) > 1e-9) factors[a] = f;
+  }
+  return factors;
+}
+
 export function shuffle(a, rng = Math.random) {
   a = a.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -36,9 +55,10 @@ export function initialState(now, base, members, perDay, rng = Math.random) {
 
 // members: {uid:{name,cash,squad,lineup,role,selling,rev,...}}   bids: {uid:{a:amount}}
 // base: {a:{v,t,p,n}}   state: {end,round,values,listings}
-export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, debtPct = 0, minSquad = MIN_SQUAD, lockMs = LOCK_MS, clauseMult = CLAUSE_MULT, clubMax = 0, rng = Math.random }) {
+export function planClose({ now, state, members, bids, base, perDay = 8, anon = false, debtPct = 0, minSquad = MIN_SQUAD, lockMs = LOCK_MS, clauseMult = CLAUSE_MULT, clubMax = 0, rng = Math.random, pointMoves = null }) {
   const values = { ...(state.values || {}) };
   const val = (a) => (values[a] != null ? values[a] : base[a] ? base[a].v : 1);
+  if (pointMoves && pointMoves.factors) for (const [a, f] of Object.entries(pointMoves.factors)) values[a] = Math.max(MIN_VALUE, r2(val(a) * f));
   const M = JSON.parse(JSON.stringify(members));
   const changed = new Set();
   const news = [];
@@ -149,6 +169,6 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
   }
   let end = (state.end || now) + DAY;
   if (end <= now + 3600 * 1000) end = now + DAY;
-  const next = { end, round: (state.round || 0) + 1, values, listings: newCpuListings(base, M, perDay, rng), cpu: nextCpu };
+  const next = { end, round: (state.round || 0) + 1, values, ...(pointMoves ? { vr: pointMoves.upTo } : state.vr != null ? { vr: state.vr } : {}), listings: newCpuListings(base, M, perDay, rng), cpu: nextCpu };
   return { state: next, memberUpdates, news, sold, cpuNew };
 }

@@ -58,33 +58,44 @@ export function buildValueIndex(rows) {
   return { full, sur, maxSeason };
 }
 
-// Devuelve el valor en millones o null si no hay coincidencia.
-export function matchValue(idx, apiName, teamName) {
+// Devuelve {val (millones), clubHits, cands, dubious} o null si no hay coincidencia.
+// El club manda: cuenta cuántas palabras del club coinciden (así «Real Madrid» no se confunde con «Real Betis»).
+export function matchValueInfo(idx, apiName, teamName) {
   if (!idx) return null;
   const n = norm(apiName), toks = n.split(' ');
   let initial = null, sur = n;
   if (toks.length > 1 && toks[0].length === 1) { initial = toks[0]; sur = toks.slice(1).join(' '); }
   const tn = norm(teamName).split(' ').filter((w) => w.length > 2);
-  const score = (e) => (tn.some((w) => e.club.includes(w)) ? 1000 : 0) + (e.season >= idx.maxSeason - 1 ? 100 : 0) + Math.min(e.val / 1e6, 99);
+  const hits = (e) => tn.filter((w) => e.club.split(' ').includes(w) || e.club.includes(w)).length;
+  const score = (e) => hits(e) * 1000 + (e.season >= idx.maxSeason - 1 ? 100 : 0) + Math.min(e.val / 1e6, 99);
   const pick = (l) => (l && l.length ? l.slice().sort((a, b) => score(b) - score(a))[0] : null);
-  let hit = null;
-  if (!initial) hit = pick(idx.full.get(n));
+  let hit = null, cands = [];
+  if (!initial) { cands = idx.full.get(n) || []; hit = pick(cands); }
   if (!hit) {
     const lastTok = sur.split(' ').slice(-1)[0];
     for (const key of [sur, lastTok]) {
       let l = idx.sur.get(key);
       if (!l) continue;
       if (initial) l = l.filter((e) => e.first.startsWith(initial));
-      if (l.length) { hit = pick(l); break; }
+      if (l.length) { cands = l; hit = pick(l); break; }
     }
   }
-  return hit && hit.val > 0 ? hit.val / 1e6 : null;
+  if (!hit || !(hit.val > 0)) return null;
+  const clubHits = hits(hit);
+  const rivals = cands.filter((e) => e !== hit && hits(e) === clubHits && e.val > 0 && Math.abs(e.val - hit.val) > 0.3 * hit.val);
+  // dudoso: no coincide el club, o hay otro candidato con la misma coincidencia de club y un valor muy distinto
+  const dubious = clubHits === 0 || rivals.length > 0;
+  return { val: hit.val / 1e6, clubHits, club: hit.club, cands: cands.length, dubious };
+}
+export function matchValue(idx, apiName, teamName) {
+  const r = matchValueInfo(idx, apiName, teamName);
+  return r ? r.val : null;
 }
 
 // picked: resultado de pickTeams().found ; squads: { [teamId]: [{id,name,age,number,position,photo}] }
 export function buildCatalog(picked, codes, squads, idx) {
   const teams = [], players = [], seen = new Set();
-  const stats = { players: 0, priced: 0, defaulted: 0, skipped: 0, perTeam: {} };
+  const stats = { players: 0, priced: 0, defaulted: 0, skipped: 0, perTeam: {}, dubious: [] };
   for (const { want, team } of picked) {
     const code = codes[team.id];
     teams.push({ i: team.id, c: code, n: want.label });
@@ -94,8 +105,9 @@ export function buildCatalog(picked, codes, squads, idx) {
       const pos = POSMAP[p.position];
       if (!pos || p.id == null || seen.has(p.id)) { stats.skipped++; continue; }
       seen.add(p.id);
-      let v = matchValue(idx, p.name, team.name);
-      if (v == null) { v = DEFAULT_VALUE[pos]; stats.defaulted++; } else stats.priced++;
+      const mi = matchValueInfo(idx, p.name, team.name);
+      let v = mi ? mi.val : null;
+      if (v == null) { v = DEFAULT_VALUE[pos]; stats.defaulted++; } else { stats.priced++; if (mi.dubious) stats.dubious.push({ name: p.name, team: team.name, value: mi.val, matchedClub: mi.club, candidates: mi.cands }); }
       v = Math.max(MIN_VALUE, Math.round(v * 100) / 100);
       players.push({ a: p.id, n: p.name, t: code, p: pos, v, num: p.number == null ? null : p.number });
       stats.players++; stats.perTeam[want.label]++;

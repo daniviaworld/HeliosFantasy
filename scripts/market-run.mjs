@@ -1,11 +1,11 @@
 // Cierre de mercados y foto de jornada de todas las ligas. Lo usan la Cloud Function (cada minuto) y el workflow de GitHub (respaldo).
 // Es seguro ejecutarlo a la vez desde los dos sitios: el cierre se hace en una transacción que comprueba que nadie lo cerró antes.
-import { planClose, initialState, newCpuListings } from './market-lib.mjs';
+import { planClose, initialState, newCpuListings, roundMoves } from './market-lib.mjs';
 import { lockMsOf, clauseMultOf, clubMaxOf } from './deals-lib.mjs';
 import { planRound } from './rounds-lib.mjs';
-import { currentRound, coreMatches } from './results-lib.mjs';
+import { currentRound, coreMatches, lastCompleteRound } from './results-lib.mjs';
 
-const cache = { base: null, baseAt: 0, fx: null, fxAt: 0 };
+const cache = { base: null, baseAt: 0, fx: null, fxAt: 0, pts: null, ptsAt: 0 };
 
 export async function runMarket({ db, now = Date.now(), log = console.log }) {
   if (!cache.base || now - cache.baseAt > 10 * 60 * 1000) {
@@ -59,7 +59,19 @@ export async function runMarket({ db, now = Date.now(), log = console.log }) {
             const bids = {};
             bidSnap.forEach((d) => { const x = d.data() || {}; if (x.round == null || x.round === st.round) bids[d.id] = x.bids || {}; });
             const debtPct = rl.debt != null ? +rl.debt : 20;
-            const r = planClose({ now, state: st, members, bids, base, perDay, anon, debtPct, lockMs: lockMsOf(rl), clauseMult: clauseMultOf(rl), clubMax: clubMaxOf(rl) });
+            // el valor de los jugadores se mueve con los puntos de las jornadas terminadas desde el último cierre
+            let pointMoves = null;
+            try {
+              const last = lastCompleteRound(matches, now);
+              if (last) {
+                if (st.vr == null) pointMoves = { upTo: last, factors: {} }; // primera vez: se parte de la jornada actual, sin efecto retroactivo
+                else if (last > st.vr) {
+                  if (!cache.pts || now - cache.ptsAt > 60 * 1000) { const ps = await db.doc('points/season').get(); cache.pts = ps.exists ? (ps.data().pl || {}) : {}; cache.ptsAt = now; }
+                  pointMoves = { upTo: last, factors: roundMoves(cache.pts, st.vr, last) };
+                }
+              }
+            } catch (e) { console.error('Valores por puntos:', e.message); }
+            const r = planClose({ now, state: st, members, bids, base, perDay, anon, debtPct, lockMs: lockMsOf(rl), clauseMult: clauseMultOf(rl), clubMax: clubMaxOf(rl), pointMoves });
             const dealsRef = ref.collection('deals');
             const oldCpu = await dealsRef.where('type', '==', 'cpu').where('status', '==', 'pending').get();
             const bidpub = await ref.collection('bidpub').get();

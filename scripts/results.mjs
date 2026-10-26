@@ -9,7 +9,8 @@ import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianP
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
-if (!SA && !DRY) { console.error('Falta FIREBASE_SERVICE_ACCOUNT'); process.exit(1); }
+const CF = !!process.env.K_SERVICE; // dentro de una Cloud Function se usan las credenciales de Google, sin clave
+if (!SA && !CF && !DRY) { console.error('Falta FIREBASE_SERVICE_ACCOUNT'); process.exit(1); }
 const E = 'https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1';
 const H = { 'User-Agent': 'Mozilla/5.0' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -24,9 +25,9 @@ async function get(u) {
 const ymd = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
 
 let db = null, admin = null;
-if (SA) {
+if (SA || CF) {
   admin = (await import('firebase-admin')).default;
-  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(SA)) });
+  if (SA) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(SA)) }); else admin.initializeApp();
   db = admin.firestore();
 }
 let cat;
