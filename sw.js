@@ -15,3 +15,20 @@ self.addEventListener('fetch', (e) => {
     }).catch(() => caches.match(r).then((m) => m || (r.mode === 'navigate' ? caches.match('./') : undefined) || Response.error()))
   );
 });
+
+// Avisos al móvil (fichajes y clausulazos)
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Helios Fantasy', {
+    body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag || 'helios', renotify: true, data: { url: d.url || './' }
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((l) => {
+    for (const c of l) if ('focus' in c) return c.focus();
+    return self.clients.openWindow(url);
+  }));
+});

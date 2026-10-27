@@ -2198,12 +2198,35 @@ function setPhoto(file){
   fr.onerror=function(){toast('No se pudo leer esa imagen')};
   fr.readAsDataURL(file);
 }
+/* ---- Avisos al móvil (Web Push) ---- */
+var VAPID_PUB='BId3qLyaY81ahCEAexoWAoNWKYAh8l8RVSwzmuuhibXVcQneRDVvrsgVFER2kDY5kJmIbRmMVZMaZg6ihRUTsv0',PUSH={on:false,busy:false,perm:'default'};
+function pushSupported(){return !!(window.isSecureContext&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&CLOUD&&FB&&FB.app&&FB.app().functions)}
+function pushU8(b){var p='='.repeat((4-b.length%4)%4),r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/')),o=new Uint8Array(r.length);for(var i=0;i<r.length;i++)o[i]=r.charCodeAt(i);return o}
+function pushCall(name,data){return FB.app().functions('europe-west1').httpsCallable(name)(data)}
+function pushReady(){return Promise.race([navigator.serviceWorker.ready,new Promise(function(_,rej){setTimeout(function(){rej(new Error('sw'))},6000)})])}
+function pushRefresh(){
+  if(!pushSupported())return;
+  PUSH.perm=Notification.permission;
+  pushReady().then(function(reg){return reg.pushManager.getSubscription()}).then(function(sub){
+    var on=!!sub&&Notification.permission==='granted';
+    if(on!==PUSH.on){PUSH.on=on;if(S.tab==='perfil')render()}
+  }).catch(function(){});
+}
+function pushHtml(){
+  if(!CLOUD||!S.user)return '';
+  if(!pushSupported())return '<section><h3>Avisos en el móvil</h3><div class="panel pad small muted">Este navegador no admite avisos. En iPhone, añade la app a la pantalla de inicio y ábrela desde ahí. En Android, usa Chrome.</div></section>';
+  var blocked=PUSH.perm==='denied';
+  return '<section><h3>Avisos en el móvil</h3><div class="panel"><div class="setrow"><div><b>Avisos de fichajes</b><p>Te avisamos al cerrar el mercado si ganas una puja, y cuando te hacen un clausulazo.'+(blocked?' Están bloqueados en este navegador: actívalos en los ajustes del sitio (el candado junto a la dirección).':'')+'</p></div><button class="sw" role="switch" aria-label="Avisos de fichajes" aria-checked="'+PUSH.on+'" data-a="pushToggle"'+(PUSH.busy||blocked?' disabled':'')+'><span></span></button></div>'+
+    (PUSH.on?'<div class="setrow" style="display:block"><button class="btn ghost sm" data-a="pushTest">Enviar aviso de prueba</button></div>':'')+'</div></section>';
+}
 function viewPerfil(){
+  pushRefresh();
   var nm=S.user?S.user.name:'Mánager',dark=THEME==='dark';
   return '<h2>Mi perfil</h2><div class="small muted" style="margin:2px 0 0">'+esc(nm)+(S.user&&S.user.email?' · '+esc(S.user.email):'')+'. Esto es solo tuyo: no cambia nada en tus ligas.</div>'+
     (REAL&&CLOUD?viewProfile():'')+(REAL?medShelf(S.user.uid,'Se'):'')+
     '<section><h3>Tema de la app</h3><div class="skins">'+Object.keys(SKINS).map(function(k){var o=SKINS[k],p=o.p;return '<button class="skin'+(k===SKIN?' on':'')+'" data-a="skin" data-k="'+k+'" aria-pressed="'+(k===SKIN)+'" aria-label="Tema '+esc(o.n)+'"><span class="sk-pv" style="background:'+p[0]+';color:'+p[3]+'"><span class="sk-bar" style="background:linear-gradient(90deg,'+p[1]+','+p[2]+')"></span><b style="font-family:'+p[4]+';font-style:'+p[5]+'">Aa</b><i style="background:'+p[1]+'"></i><i style="background:'+p[2]+'"></i></span><span class="sk-n">'+esc(o.n)+'</span><span class="sk-d">'+esc(o.d)+'</span></button>'}).join('')+'</div><p class="small muted" style="margin:8px 2px 0">Se recuerda en este dispositivo. Cada tema cambia colores, tipografías y formas.</p></section>'+
     '<section><h3>Modo claro u oscuro</h3><div class="panel"><div class="setrow"><div><b>Modo oscuro</b><p>'+(SKIN==='helios'?'Cambia entre la versión oscura y la clara del tema Helios.':'El tema '+esc(SKINS[SKIN].n)+' ya fija su propio modo. Elige Helios para cambiarlo.')+'</p></div><button class="sw" role="switch" aria-label="Modo oscuro" aria-checked="'+(SKIN==='helios'?dark:(SKINS[SKIN].tone==='dark'))+'" data-a="theme"'+(SKIN==='helios'?'':' disabled')+'></button></div></div></section>'+
+    pushHtml()+
     (CLOUD&&S.user?'<section><h3>Cuenta</h3><div class="panel pad" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div style="min-width:0"><b>Sesión iniciada</b><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">'+esc(S.user.email||'')+'</div></div><button class="btn ghost sm" data-a="signOut">Cerrar sesión</button></div></section>':'');
 }
 function viewProfile(){
@@ -3545,6 +3568,28 @@ function applyTheme(){
   if(tb&&tb.setAttribute)tb.setAttribute('title',THEME==='dark'?'Pasar a modo claro':'Pasar a modo oscuro');
   var mt=$('meta[name="theme-color"]');if(mt&&mt.setAttribute)mt.setAttribute('content',SKIN!=='helios'?SK.head:(THEME==='dark'?'#0C1630':'#0F1E3D'));
 }
+A.pushToggle=function(){
+  if(PUSH.busy||!pushSupported())return;
+  PUSH.busy=true;render();
+  var done=function(msg){PUSH.busy=false;if(msg)toast(msg);render()};
+  if(PUSH.on){
+    pushReady().then(function(reg){return reg.pushManager.getSubscription()}).then(function(sub){
+      if(!sub)return;var ep=sub.endpoint;
+      return pushCall('savePush',{off:true,endpoint:ep}).catch(function(){}).then(function(){return sub.unsubscribe()});
+    }).then(function(){PUSH.on=false;done('Avisos desactivados')}).catch(function(){done('No se pudieron desactivar')});
+    return;
+  }
+  Notification.requestPermission().then(function(p){
+    PUSH.perm=p;
+    if(p!=='granted'){done('Sin permiso no podemos avisarte');return}
+    return pushReady().then(function(reg){
+      return reg.pushManager.getSubscription().then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushU8(VAPID_PUB)})});
+    }).then(function(sub){return pushCall('savePush',{sub:sub.toJSON()})}).then(function(){PUSH.on=true;done('Avisos activados')});
+  }).catch(function(){done('No se pudieron activar los avisos. Prueba desde la app instalada o desde Chrome.')});
+};
+A.pushTest=function(){
+  pushCall('pushTest',{}).then(function(r){toast(r&&r.data&&r.data.sent?'Aviso enviado':'No hay ningún dispositivo registrado')}).catch(function(){toast('No se pudo enviar el aviso')});
+};
 A.skin=function(d){if(!SKINS[d.k])return;SKIN=d.k;try{localStorage.setItem('helios.skin',SKIN)}catch(e){}applyTheme();render()};
 A.theme=function(){THEME=THEME==='dark'?'light':'dark';try{localStorage.setItem('helios.theme',THEME)}catch(e){}applyTheme();if(S.tab==='perfil')render()};
 applyTheme();
