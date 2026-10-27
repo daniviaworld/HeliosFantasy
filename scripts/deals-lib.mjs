@@ -67,7 +67,15 @@ export function weekCounts(log, now) {
 const has = (arr, a) => (arr || []).map(String).includes(String(a));
 
 // Quita al jugador de una plantilla (alineación, rol, venta, capitán, entrenador, protección)
+// ¿Está el jugador en el once, de entrenador o de capitán? Solo entonces cambiarlo obliga a volver a guardar la alineación.
+export function inEleven(s, a) {
+  const k = String(a);
+  if (s.coach != null && String(s.coach) === k) return true;
+  if (s.cap != null && String(s.cap) === k) return true;
+  return Object.values(s.lineup || {}).some((arr) => (arr || []).some((x) => x != null && String(x) === k));
+}
 export function dropPlayer(s, a) {
+  const was = inEleven(s, a);
   s.squad = (s.squad || []).filter((x) => String(x) !== String(a));
   for (const pos of Object.keys(s.lineup || {})) s.lineup[pos] = (s.lineup[pos] || []).map((x) => (x != null && String(x) === String(a) ? null : x));
   if (s.role) delete s.role[a];
@@ -75,12 +83,13 @@ export function dropPlayer(s, a) {
   if (s.pm) delete s.pm[a];
   if (s.cap != null && String(s.cap) === String(a)) s.cap = null;
   if (s.coach != null && String(s.coach) === String(a)) s.coach = s.squad.find((x) => x < 0) ?? null;
-  s.saved = false;
+  if (was) s.saved = false;
 }
 
 // Pasa el jugador `a` de `from` a `to` por `price`. Devuelve nada; modifica M.
 export function transfer(M, a, from, to, price, now, newClause, lockMs = LOCK_MS) {
   const s = M[from], b = M[to];
+  const was = inEleven(s, a);
   s.cash = r2(s.cash + price);
   s.squad = (s.squad || []).filter((x) => String(x) !== String(a));
   for (const pos of Object.keys(s.lineup || {})) s.lineup[pos] = (s.lineup[pos] || []).map((x) => (x != null && String(x) === String(a) ? null : x));
@@ -89,12 +98,11 @@ export function transfer(M, a, from, to, price, now, newClause, lockMs = LOCK_MS
   if (s.pm) delete s.pm[a];
   if (s.cap != null && String(s.cap) === String(a)) s.cap = null;
   if (s.coach != null && String(s.coach) === String(a)) s.coach = s.squad.find((x) => x < 0) ?? null;
-  s.saved = false;
+  if (was) s.saved = false;
   b.cash = r2(b.cash - price);
   b.squad = [...(b.squad || []), a];
-  if (a < 0 && b.coach == null) b.coach = a;
+  if (a < 0 && b.coach == null) { b.coach = a; b.saved = false; }
   b.pm = { ...(b.pm || {}), [a]: { l: now + lockMs, c: newClause } };
-  b.saved = false;
 }
 
 // members: {uid:{name,cash,squad,lineup,role,selling,pm,cap,coach,rev}}
@@ -228,7 +236,7 @@ export function planLoans({ now, members, base = {}, values = {}, anon = false }
       const B = M[lo.t];
       if (B) { if (has(B.squad, a)) dropPlayer(B, a); if (B.ln) delete B.ln[a]; changed.add(lo.t); news.push({ k: 'fichaje', to: lo.t, a: Number(a), x: `Termina la cesión de ${pname(a)}: vuelve con ${S.name || 'su dueño'}.` }); }
       if (!has(S.squad, a)) { S.squad = [...(S.squad || []), Number(a)]; if (Number(a) < 0 && S.coach == null) S.coach = Number(a); if (lo.pm) S.pm = { ...(S.pm || {}), [a]: lo.pm }; }
-      delete S.lo[a]; S.saved = false; changed.add(ou);
+      delete S.lo[a]; changed.add(ou);
       news.push({ k: 'fichaje', to: ou, a: Number(a), x: `${pname(a)} vuelve a tu plantilla tras la cesión.` });
     }
     // cesiones recibidas cuyo dueño ya no está en la liga

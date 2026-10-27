@@ -117,12 +117,12 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     const buyer = M[win.uid];
     buyer.cash = r2(buyer.cash - win.amt);
     buyer.squad = [...(buyer.squad || []), a];
-    if (a < 0 && buyer.coach == null) buyer.coach = a;
+    if (a < 0 && buyer.coach == null) { buyer.coach = a; buyer.saved = false; }
     buyer.pm = { ...(buyer.pm || {}), [a]: { l: now + lockMs, c: r2(Math.max(win.amt, v) * clauseMult) } };
-    buyer.saved = false;
     changed.add(win.uid);
     if (!cpu) {
       const s = M[L.seller];
+      const wasIn = (s.coach != null && String(s.coach) === String(a)) || (s.cap != null && String(s.cap) === String(a)) || Object.values(s.lineup || {}).some((arr) => (arr || []).some((x) => x != null && String(x) === String(a)));
       s.cash = r2(s.cash + win.amt);
       s.squad = s.squad.filter((x) => String(x) !== String(a));
       for (const pos of Object.keys(s.lineup || {})) s.lineup[pos] = s.lineup[pos].map((x) => (String(x) === String(a) ? null : x));
@@ -131,7 +131,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
       if (s.selling) delete s.selling[a];
       if (s.pm) delete s.pm[a];
       if (s.cap != null && String(s.cap) === String(a)) s.cap = null;
-      s.saved = false;
+      if (wasIn) s.saved = false;
       changed.add(L.seller);
       news.push({ k: 'fichaje', to: L.seller, a: a, x: `Vendes a ${pname(a)} a ${who(win.uid)} por ${fmt(win.amt)}.` });
     }
@@ -149,7 +149,7 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
     const s0 = M[L.seller], key = `${L.seller}|${L.a}`, n = prevCpu[key] || 0, a = L.a;
     if (!s0 || !(s0.selling && s0.selling[a] != null)) continue;
     if (n >= CPU_OFFERS) {
-      delete s0.selling[a]; s0.saved = false; changed.add(L.seller);
+      delete s0.selling[a]; changed.add(L.seller);
       news.push({ k: 'mercado', to: L.seller, a, x: `${pname(a)} no ha encontrado comprador tras ${CPU_OFFERS} ofertas de la liga: vuelve a tu plantilla.` });
       continue;
     }

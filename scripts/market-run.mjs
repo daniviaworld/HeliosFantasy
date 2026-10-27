@@ -7,7 +7,7 @@ import { currentRound, coreMatches, lastCompleteRound } from './results-lib.mjs'
 
 const cache = { base: null, baseAt: 0, fx: null, fxAt: 0, pts: null, ptsAt: 0 };
 
-export async function runMarket({ db, now = Date.now(), log = console.log }) {
+export async function runMarket({ db, now = Date.now(), log = console.log, notify = null }) {
   if (!cache.base || now - cache.baseAt > 10 * 60 * 1000) {
     const cat = await db.collection('catalog').doc('main').get();
     if (!cat.exists) { log('No hay catálogo todavía.'); return { closed: 0, created: 0, snaps: 0 }; }
@@ -91,7 +91,7 @@ export async function runMarket({ db, now = Date.now(), log = console.log }) {
               for (const [k, rf, d] of ops) { if (k === 'set') tx.set(rf, d); else if (k === 'update') tx.update(rf, d); else tx.delete(rf); }
               return true;
             });
-            if (won) { closed++; log('Mercado cerrado en', data.name, '·', r.sold.length, 'fichajes'); }
+            if (won) { closed++; log('Mercado cerrado en', data.name, '·', r.sold.length, 'fichajes'); if (notify) { try { await notify(r.news, data.name); } catch (e) { console.warn('aviso:', e.message); } } }
             else log('El mercado de', data.name, 'ya lo había cerrado otra ejecución.');
           }
         }
