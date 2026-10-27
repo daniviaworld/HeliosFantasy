@@ -40,6 +40,7 @@ export function makeCodes(teams) {
   return out;
 }
 
+const TMPOS = { goalkeeper: 'POR', defender: 'DEF', midfield: 'MED', attack: 'DEL' };
 export function buildValueIndex(rows) {
   const full = new Map(), sur = new Map();
   let maxSeason = 0;
@@ -47,20 +48,19 @@ export function buildValueIndex(rows) {
   for (const r of rows) {
     const v = Number(r.market_value_in_eur);
     const nm = norm(r.name) || norm(`${r.first_name || ''} ${r.last_name || ''}`);
-    const e = { val: Number.isFinite(v) ? v : 0, first: norm(r.first_name), club: norm(r.current_club_name), season: Number(r.last_season) || 0 };
+    const e = { name: r.name || `${r.first_name || ''} ${r.last_name || ''}`.trim(), val: Number.isFinite(v) ? v : 0, first: norm(r.first_name), club: norm(r.current_club_name), season: Number(r.last_season) || 0, pos: TMPOS[String(r.position || '').toLowerCase()] || null };
     if (e.season > maxSeason) maxSeason = e.season;
     add(full, nm, e);
     const ln = norm(r.last_name) || nm.split(' ').slice(-1)[0];
     add(sur, ln, e);
-    const lt = ln.split(' ').slice(-1)[0];
-    if (lt !== ln) add(sur, lt, e);
+    for (const tk of ln.split(' ')) if (tk.length > 1 && tk !== ln) add(sur, tk, e); // «López Marín» también se encuentra por «López»
   }
   return { full, sur, maxSeason };
 }
 
 // Devuelve {val (millones), clubHits, cands, dubious} o null si no hay coincidencia.
 // El club manda: cuenta cuántas palabras del club coinciden (así «Real Madrid» no se confunde con «Real Betis»).
-export function matchValueInfo(idx, apiName, teamName) {
+export function matchValueInfo(idx, apiName, teamName, pos) {
   if (!idx) return null;
   const n = norm(apiName), toks = n.split(' ');
   let initial = null, sur = n;
@@ -68,15 +68,19 @@ export function matchValueInfo(idx, apiName, teamName) {
   const tn = norm(teamName).split(' ').filter((w) => w.length > 2);
   const hits = (e) => tn.filter((w) => e.club.split(' ').includes(w) || e.club.includes(w)).length;
   const score = (e) => hits(e) * 1000 + (e.season >= idx.maxSeason - 1 ? 100 : 0) + Math.min(e.val / 1e6, 99);
+  // si conocemos la posición, descartamos homónimos de otra posición (siempre que quede alguno)
+  const byPos = (l) => { if (!pos || !l) return l; const f = l.filter((e) => !e.pos || e.pos === pos); return f.length ? f : l; };
   const pick = (l) => (l && l.length ? l.slice().sort((a, b) => score(b) - score(a))[0] : null);
   let hit = null, cands = [];
-  if (!initial) { cands = idx.full.get(n) || []; hit = pick(cands); }
+  if (!initial) { cands = byPos(idx.full.get(n) || []); hit = pick(cands); }
   if (!hit) {
     const lastTok = sur.split(' ').slice(-1)[0];
     for (const key of [sur, lastTok]) {
       let l = idx.sur.get(key);
       if (!l) continue;
       if (initial) l = l.filter((e) => e.first.startsWith(initial));
+      else if (toks.length > 1) { const f0 = toks[0]; l = l.filter((e) => !e.first || e.first.startsWith(f0) || f0.startsWith(e.first.split(' ')[0])); } // nombre completo: debe coincidir el nombre de pila
+      l = byPos(l);
       if (l.length) { cands = l; hit = pick(l); break; }
     }
   }
@@ -84,8 +88,11 @@ export function matchValueInfo(idx, apiName, teamName) {
   const clubHits = hits(hit);
   const rivals = cands.filter((e) => e !== hit && hits(e) === clubHits && e.val > 0 && Math.abs(e.val - hit.val) > 0.3 * hit.val);
   // dudoso: no coincide el club, o hay otro candidato con la misma coincidencia de club y un valor muy distinto
-  const dubious = clubHits === 0 || rivals.length > 0;
-  return { val: hit.val / 1e6, clubHits, club: hit.club, cands: cands.length, dubious };
+  // dudoso de verdad: el club no coincide Y hay varios homónimos, o hay otro candidato del mismo club con valor muy distinto.
+  // Si solo hay un candidato con otro club, casi siempre es un traspaso que el archivo aún no recoge: se da por bueno.
+  const dubious = (clubHits === 0 && cands.length > 1) || rivals.length > 0;
+  const top = cands.slice().sort((a, b) => score(b) - score(a)).slice(0, 6).map((e) => ({ name: e.name, club: e.club, val: e.val / 1e6, season: e.season, pos: e.pos }));
+  return { val: hit.val / 1e6, clubHits, club: hit.club, cands: cands.length, dubious, stale: clubHits === 0 && cands.length === 1, top };
 }
 export function matchValue(idx, apiName, teamName) {
   const r = matchValueInfo(idx, apiName, teamName);
@@ -105,7 +112,7 @@ export function buildCatalog(picked, codes, squads, idx) {
       const pos = POSMAP[p.position];
       if (!pos || p.id == null || seen.has(p.id)) { stats.skipped++; continue; }
       seen.add(p.id);
-      const mi = matchValueInfo(idx, p.name, team.name);
+      const mi = matchValueInfo(idx, p.name, team.name, pos);
       let v = mi ? mi.val : null;
       if (v == null) { v = DEFAULT_VALUE[pos]; stats.defaulted++; } else { stats.priced++; if (mi.dubious) stats.dubious.push({ name: p.name, team: team.name, value: mi.val, matchedClub: mi.club, candidates: mi.cands }); }
       v = Math.max(MIN_VALUE, Math.round(v * 100) / 100);
