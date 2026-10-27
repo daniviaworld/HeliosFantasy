@@ -915,6 +915,12 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
 .cup-how{margin:16px 0 0;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:4px 14px}
 .cup-how summary{cursor:pointer;font-weight:700;padding:10px 0}.cup-how ol{margin:0 0 10px;padding-left:20px;display:grid;gap:6px;font-size:14px;color:var(--muted)}
 .np-cup .ctie{padding:8px 4px;border-color:#c9c2ad;color:#1a2238}.np-cup .ctie .cpn.w{color:#a8231f}.np-cup .ctie .cs b{color:#1a2238}
+
+/* botones azules y pestañas ajustadas */
+.seg.fit{overflow:visible;gap:6px}.seg.fit button{flex:1 1 auto;min-width:0;padding:0 8px;font-size:13.5px}
+:root:is(:not([data-skin]),[data-skin="helios"]) :is(.btn:not(.primary):not(.gold):not(.ghost):not([disabled]),.seg button:not([aria-pressed="true"])){background:linear-gradient(165deg,#2B4799 0%,#16275F 100%);border:1px solid rgba(150,185,255,.45);color:#EAF1FF;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 5px 14px rgba(8,16,60,.38);transition:transform .12s,box-shadow .12s}
+:root:is(:not([data-skin]),[data-skin="helios"]) :is(.btn,.seg button):not([disabled]):active{transform:scale(.97)}
+:root:not([data-theme="dark"]):is(:not([data-skin]),[data-skin="helios"]) :is(.btn:not(.primary):not(.gold):not(.ghost):not([disabled]),.seg button:not([aria-pressed="true"])){background:linear-gradient(165deg,#F1F5FF 0%,#D6E2FF 100%);border-color:#9DB6F2;color:#17316F;box-shadow:inset 0 1px 0 #fff,0 4px 10px rgba(40,70,160,.18)}
 /*THEME-END*/
 </style>
 
@@ -1545,7 +1551,7 @@ function viewAuth(){
   '<label class="fl" for="auPass">Contraseña</label><input id="auPass" class="inp" type="password" autocomplete="'+(reg?'new-password':'current-password')+'">'+
   '<p class="err" role="alert"'+(authErr?'':' hidden')+'>'+esc(authErr)+'</p>'+
   '<button class="btn primary full" data-a="doAuth"'+(authBusy?' disabled':'')+'>'+(authBusy?'Un momento…':reg?'Crear cuenta':'Entrar')+'</button>'+
-  '<button class="btn full" data-a="authMode">'+(reg?'Ya tengo cuenta':'Crear una cuenta nueva')+'</button>'+
+  '<button class="btn full" data-a="authMode">'+(reg?'Ya tengo cuenta':'Crear una cuenta nueva')+'</button>'+'<button class="btn full" data-a="privacy" style="border:0;background:none;color:var(--muted);font-size:13px;min-height:36px">Política de privacidad</button>'+
   (reg?'':'<button class="btn full" data-a="resetPass" style="border:0;background:none;color:var(--muted)">He olvidado la contraseña</button>')+'</div>';
 }
 
@@ -1794,7 +1800,7 @@ function viewIdeal(){
 function viewHome(){
   if(!(REAL&&CLOUD))return viewSummary();
   var tabs=[['feed','Actividad'],['ideal','11 ideal'],['sum','Resumen']];if(S.rules&&S.rules.clause)tabs.splice(1,0,['cl','Clausulazos']);
-  var seg='<div class="seg" role="group" aria-label="Actividad">'+tabs.map(function(t){return '<button data-a="atab" data-t="'+t[0]+'" aria-pressed="'+((S.atab||'feed')===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>';
+  var seg='<div class="seg fit" role="group" aria-label="Actividad">'+tabs.map(function(t){return '<button data-a="atab" data-t="'+t[0]+'" aria-pressed="'+((S.atab||'feed')===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>';
   return seg+((S.atab||'feed')==='feed'?viewFeed():S.atab==='cl'?viewClauses():S.atab==='ideal'?viewIdeal():viewSummary());
 }
 function viewSummary(){
@@ -2222,6 +2228,7 @@ function pushHtml(){
   return '<section><h3>Avisos en el móvil</h3><div class="panel"><div class="setrow"><div><b>Avisos de fichajes</b><p>Te avisamos al cerrar el mercado si ganas una puja, y cuando te hacen un clausulazo.'+(blocked?' Están bloqueados en este navegador: actívalos en los ajustes del sitio (el candado junto a la dirección).':'')+'</p></div><button class="sw" role="switch" aria-label="Avisos de fichajes" aria-checked="'+PUSH.on+'" data-a="pushToggle"'+(PUSH.busy||blocked?' disabled':'')+'><span></span></button></div>'+
     (PUSH.on?'<div class="setrow" style="display:block"><button class="btn ghost sm" data-a="pushTest">Enviar aviso de prueba</button></div>':'')+'</div></section>';
 }
+function privacyHtml(){return '<h2>Política de privacidad</h2><p class="muted small">Actualizada el 27 de octubre de 2026</p>'+[["Quién es el responsable", "Helios Fantasy DWT es una app de DANIVIA World Technologies (Benidorm, Alicante, España). Es un juego entre amigos, sin anuncios. Contacto: daniviaworld@gmail.com."], ["Qué datos guardamos", "Tu correo y tu nombre en la liga. Tu contraseña la gestiona Google Firebase Authentication y nosotros no podemos verla. También guardamos tu foto de perfil y tu equipo favorito si los eliges, las ligas en las que juegas, tu plantilla, tus pujas, fichajes, clausulazos y puntos, y los avisos del móvil si los activas."], ["Para qué los usamos", "Solo para que el juego funcione: mostrarte tus ligas, calcular puntos y clasificaciones, resolver el mercado y enviarte avisos de tus fichajes y clausulazos. No los usamos para publicidad ni perfiles comerciales."], ["Quién puede ver qué", "Los demás mánagers de tu liga ven tu nombre, tu foto, tu equipo y tus puntos. Tu saldo está oculto en la app. Tu correo no se muestra a otros mánagers."], ["Con quién se comparten", "No vendemos ni cedemos tus datos. Se almacenan en los servidores de Google Firebase y la app se aloja en GitHub Pages. Los datos de jugadores y partidos vienen de fuentes públicas de fútbol y no contienen datos tuyos."], ["Avisos en el móvil", "Si activas los avisos, guardamos el identificador técnico de tu navegador o móvil para poder enviártelos. Puedes desactivarlos cuando quieras en Mi perfil."], ["Tus derechos", "Puedes pedir que veamos, corrijamos o borremos tus datos escribiendo a daniviaworld@gmail.com. Puedes salir de una liga cuando quieras y dejarás de verla. Si pides el borrado, eliminamos tu cuenta y tus datos personales."], ["Cambios", "Si cambiamos esta política, aparecerá aquí con la fecha nueva."]].map(function(x){return '<h3>'+x[0]+'</h3><p>'+x[1]+'</p>'}).join('')+'<button class="btn full" data-a="close">Cerrar</button>'}
 function viewPerfil(){
   pushRefresh();
   var nm=S.user?S.user.name:'Mánager',dark=THEME==='dark';
@@ -2230,7 +2237,7 @@ function viewPerfil(){
     '<section><h3>Tema de la app</h3><div class="skins">'+Object.keys(SKINS).map(function(k){var o=SKINS[k],p=o.p;return '<button class="skin'+(k===SKIN?' on':'')+'" data-a="skin" data-k="'+k+'" aria-pressed="'+(k===SKIN)+'" aria-label="Tema '+esc(o.n)+'"><span class="sk-pv" style="background:'+p[0]+';color:'+p[3]+'"><span class="sk-bar" style="background:linear-gradient(90deg,'+p[1]+','+p[2]+')"></span><b style="font-family:'+p[4]+';font-style:'+p[5]+'">Aa</b><i style="background:'+p[1]+'"></i><i style="background:'+p[2]+'"></i></span><span class="sk-n">'+esc(o.n)+'</span><span class="sk-d">'+esc(o.d)+'</span></button>'}).join('')+'</div><p class="small muted" style="margin:8px 2px 0">Se recuerda en este dispositivo. Cada tema cambia colores, tipografías y formas.</p></section>'+
     '<section><h3>Modo claro u oscuro</h3><div class="panel"><div class="setrow"><div><b>Modo oscuro</b><p>'+(SKIN==='helios'?'Cambia entre la versión oscura y la clara del tema Helios.':'El tema '+esc(SKINS[SKIN].n)+' ya fija su propio modo. Elige Helios para cambiarlo.')+'</p></div><button class="sw" role="switch" aria-label="Modo oscuro" aria-checked="'+(SKIN==='helios'?dark:(SKINS[SKIN].tone==='dark'))+'" data-a="theme"'+(SKIN==='helios'?'':' disabled')+'></button></div></div></section>'+
     pushHtml()+
-    (CLOUD&&S.user?'<section><h3>Cuenta</h3><div class="panel pad" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div style="min-width:0"><b>Sesión iniciada</b><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">'+esc(S.user.email||'')+'</div></div><button class="btn ghost sm" data-a="signOut">Cerrar sesión</button></div></section>':'');
+    (CLOUD&&S.user?'<section><h3>Cuenta</h3><div class="panel pad" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div style="min-width:0"><b>Sesión iniciada</b><div class="small muted" style="overflow:hidden;text-overflow:ellipsis">'+esc(S.user.email||'')+'</div></div><button class="btn ghost sm" data-a="signOut">Cerrar sesión</button></div></section>':'')+'<section><h3>Privacidad</h3><div class="panel pad"><p class="small muted" style="margin:0 0 10px">Qué datos guardamos, para qué y cómo pedir su borrado.</p><button class="btn full" style="margin-top:0" data-a="privacy">Leer la política de privacidad</button></div></section>';
 }
 function viewProfile(){
   var me={n:S.user?S.user.name:'Tú',ph:S.ph||''};
@@ -3593,6 +3600,7 @@ A.pushToggle=function(){
 A.pushTest=function(){
   pushCall('pushTest',{}).then(function(r){toast(r&&r.data&&r.data.sent?'Aviso enviado':'No hay ningún dispositivo registrado')}).catch(function(){toast('No se pudo enviar el aviso')});
 };
+A.privacy=function(){openSheet(privacyHtml())};
 A.skin=function(d){if(!SKINS[d.k])return;SKIN=d.k;try{localStorage.setItem('helios.skin',SKIN)}catch(e){}applyTheme();render()};
 A.theme=function(){THEME=THEME==='dark'?'light':'dark';try{localStorage.setItem('helios.theme',THEME)}catch(e){}applyTheme();if(S.tab==='perfil')render()};
 applyTheme();
