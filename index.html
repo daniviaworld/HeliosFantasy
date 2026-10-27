@@ -214,7 +214,10 @@ select.inp{font-size:15px}
 .jd{padding:2px 0 10px;border-bottom:1px solid var(--line)}.jd .jdr{display:flex;gap:10px;padding:7px 4px;font-size:14px}.jd .jdr span:first-child{width:46px;text-align:right;color:var(--muted)}.jd .jdr span:nth-child(2){flex:1}.jd .jdr b{min-width:34px;text-align:right}.jd .jdr b.pos{color:#22c55e}.jd .jdr b.neg{color:#ef4444}.jd .jdr b.zero{color:var(--muted)}.jd .jdh{display:flex;gap:10px;padding:4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.jd .jdh span:first-child{width:46px;text-align:right}.jd .jdh span:nth-child(2){flex:1}.jd .jdh span:last-child{min-width:34px;text-align:right}
 
 .rstrip{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 12px;margin:0 -2px;scrollbar-width:none}.rstrip::-webkit-scrollbar{display:none}
-.rc{flex:0 0 62px;height:84px;border-radius:12px;border:2px solid var(--line);background:var(--surface2);color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:7px 0 0;font:inherit;cursor:pointer;overflow:hidden}
+.rcw{display:flex;flex-direction:column;align-items:center;width:100%;gap:3px}
+.rcw .bar{width:100%}
+.rc .rcw{align-self:stretch}
+.rc{flex:0 0 62px;height:104px;border-radius:12px;border:2px solid var(--line);background:var(--surface2);color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:7px 0 0;font:inherit;cursor:pointer;overflow:hidden}
 .rc small{font:700 12px/1 var(--font-body);color:var(--muted);letter-spacing:.04em}
 .rc b{font:800 26px/1 var(--font-display)}
 .rc .bar{display:block;width:100%;height:11px;background:var(--muted);opacity:.5}
@@ -582,7 +585,7 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
 
 /* ficha del jugador: tira de jornadas y desglose */
 .rstrip{gap:9px;padding:8px 2px 14px}
-.rc{flex:0 0 64px;height:90px;border-radius:16px;border:0;background:var(--surface2);box-shadow:inset 0 0 0 1.5px var(--line);padding-top:9px}
+.rc{flex:0 0 64px;height:106px;border-radius:16px;border:0;background:var(--surface2);box-shadow:inset 0 0 0 1.5px var(--line);padding:9px 0 0}
 .rc small{font:800 12px/1 var(--font-body);letter-spacing:.02em}
 .rc b{font:800 30px/1 var(--font-display);font-style:italic}
 .rc .bar{height:12px}
@@ -2803,7 +2806,7 @@ function fanPts(p,r){var b=p.jp&&p.jp[r],l=(r===CUR)?(p.lv||0):0,has=b!=null||(r
 function fanRounds(p){var max=CUR||0;Object.keys(p.jp||{}).forEach(function(r){if(+r>max)max=+r});var a=[];for(var r=1;r<=max;r++)a.push(r);return a}
 function fanChip(p,id,r,sel){
   var v=fanPts(p,r),cls=v==null?'na':v>0?'pos':v<0?'neg':'zero';
-  return '<button class="rc '+cls+(sel?' sel':'')+'" data-a="rsel" data-id="'+id+'" data-j="'+r+'" id="rc'+r+'"><small>J'+r+(r===CUR&&liveOn()?'<i class="ld"></i>':'')+'</small><b>'+(v==null?'–':v)+'</b><i class="bar"></i></button>';
+  return '<button class="rc '+cls+(sel?' sel':'')+'" data-a="rsel" data-id="'+id+'" data-j="'+r+'" id="rc'+r+'"><small>J'+r+(r===CUR&&liveOn()?'<i class="ld"></i>':'')+'</small><span class="rcw"><b>'+(v==null?'–':v)+'</b><i class="bar" style="height:'+(v==null?4:Math.max(4,Math.min(38,Math.round(4+Math.max(v,0)*1.7))))+'px"></i></span></button>';
 }
 function fanMatch(p,r){
   var m=FIX&&(FIX.matches||[]).filter(function(x){return x.r===r&&(x.h===p.t||x.a===p.t)})[0];
