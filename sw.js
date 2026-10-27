@@ -21,7 +21,7 @@ self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Helios Fantasy', {
-    body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag || 'helios', renotify: true, data: { url: d.url || './' }
+    body: d.body || '', icon: 'icon-192.png', badge: 'badge-96.png', tag: d.tag || 'helios', renotify: true, data: { url: d.url || './' }
   }));
 });
 self.addEventListener('notificationclick', (e) => {
