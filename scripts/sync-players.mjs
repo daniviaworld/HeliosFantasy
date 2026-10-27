@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { parse } from 'csv-parse/sync';
-import { pickTeams, makeCodes, buildValueIndex, buildCatalog, pickCoach, coachEntry } from './lib.mjs';
+import { pickTeams, makeCodes, buildValueIndex, buildCatalog, pickCoach, coachEntry, matchValueInfo, MIN_VALUE } from './lib.mjs';
 
 const KEY = process.env.API_FOOTBALL_KEY;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -10,7 +10,7 @@ const VALUES_URL = process.env.VALUES_URL ||
   'https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/players.csv.gz';
 const DRY = !!process.env.DRY_RUN;
 const SLEEP_MS = Number(process.env.SLEEP_MS || 7000);
-if (!KEY || (!SA && !DRY)) { console.error('Faltan los secretos API_FOOTBALL_KEY y/o FIREBASE_SERVICE_ACCOUNT.'); process.exit(1); }
+if (!SA && !DRY) { console.error('Falta el secreto FIREBASE_SERVICE_ACCOUNT.'); process.exit(1); }
 
 const API = 'https://v3.football.api-sports.io';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -49,7 +49,43 @@ async function loadValues() {
 }
 
 const wanted = JSON.parse(fs.readFileSync(new URL('./laliga-teams.json', import.meta.url), 'utf8'));
-const teamsResp = await api('/teams?country=Spain');
+
+// Modo solo precios: si la API de plantillas no está disponible (cuenta suspendida, sin clave, sin cuota),
+// se conservan jugadores, ids y equipos del catálogo actual y solo se recalculan los precios con Transfermarkt.
+async function repriceOnly(why) {
+  console.warn(`AVISO: ${why}`);
+  console.warn('Modo solo precios: se conservan jugadores, ids y equipos del catálogo actual y se recalculan los precios.');
+  if (DRY) { console.error('DRY_RUN sin API: no hay catálogo que reprecificar.'); process.exit(1); }
+  const admin = (await import('firebase-admin')).default;
+  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(SA)) });
+  const ref = admin.firestore().doc('catalog/main');
+  const snap = await ref.get();
+  if (!snap.exists) { console.error('No hay catálogo todavía; no se puede reprecificar.'); process.exit(1); }
+  const prev = snap.data();
+  const idx = await loadValues();
+  if (!idx) { console.error('No hay valores de mercado: no se cambia nada.'); process.exit(1); }
+  const label = {}; for (const t of prev.teams || []) label[t.c] = t.n;
+  let changed = 0, same = 0, nomatch = 0; const dubious = [], moved = [];
+  const players = (prev.players || []).map((p) => {
+    if (p.p === 'ENT') return p;
+    const mi = matchValueInfo(idx, p.n, label[p.t] || p.t);
+    if (!mi) { nomatch++; return p; }
+    const v = Math.max(MIN_VALUE, Math.round(mi.val * 100) / 100);
+    if (mi.dubious) dubious.push({ name: p.n, team: label[p.t] || p.t, value: v, matchedClub: mi.club, candidates: mi.cands });
+    if (Math.abs(v - p.v) > 1e-9) { changed++; moved.push({ name: p.n, team: p.t, from: p.v, to: v }); return { ...p, v }; }
+    same++; return p;
+  });
+  console.log(`Precios recalculados: ${changed} cambian, ${same} igual, ${nomatch} sin coincidencia (se conserva su precio).`);
+  moved.sort((x, y) => Math.abs(y.to - y.from) - Math.abs(x.to - x.from));
+  console.log('Mayores cambios:'); for (const m of moved.slice(0, 40)) console.log(`  · ${m.name} (${m.team}): ${m.from} M → ${m.to} M`);
+  if (dubious.length) { console.log(`Precios dudosos (${dubious.length}): no coincide el club o hay homónimos con valores muy distintos. Revísalos:`); for (const d of dubious.slice(0, 80)) console.log(`  · ${d.name} (${d.team}) → ${d.value.toFixed(2)} M, club encontrado: ${d.matchedClub || '—'}, candidatos: ${d.candidates}`); }
+  await ref.set({ ...prev, players, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  console.log('Catálogo actualizado (solo precios).');
+  process.exit(0);
+}
+if (!KEY) await repriceOnly('Falta el secreto API_FOOTBALL_KEY.');
+let teamsResp;
+try { teamsResp = await api('/teams?country=Spain'); } catch (e) { await repriceOnly(e.message); }
 const { found, missing } = pickTeams(teamsResp.response, wanted);
 if (missing.length) console.warn('Equipos sin encontrar en la API:', missing.join(', '));
 if (found.length < 18) { console.error(`Solo se encontraron ${found.length} equipos. No se actualiza nada.`); process.exit(1); }
