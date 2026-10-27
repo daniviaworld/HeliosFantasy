@@ -921,6 +921,16 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
 :root:is(:not([data-skin]),[data-skin="helios"]) :is(.btn:not(.primary):not(.gold):not(.ghost):not([disabled]),.seg button:not([aria-pressed="true"])){background:linear-gradient(165deg,#2B4799 0%,#16275F 100%);border:1px solid rgba(150,185,255,.45);color:#EAF1FF;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 5px 14px rgba(8,16,60,.38);transition:transform .12s,box-shadow .12s}
 :root:is(:not([data-skin]),[data-skin="helios"]) :is(.btn,.seg button):not([disabled]):active{transform:scale(.97)}
 :root:not([data-theme="dark"]):is(:not([data-skin]),[data-skin="helios"]) :is(.btn:not(.primary):not(.gold):not(.ghost):not([disabled]),.seg button:not([aria-pressed="true"])){background:linear-gradient(165deg,#F1F5FF 0%,#D6E2FF 100%);border-color:#9DB6F2;color:#17316F;box-shadow:inset 0 1px 0 #fff,0 4px 10px rgba(40,70,160,.18)}
+
+.cup-ph{margin:22px 0 -2px;font:800 15px/1 var(--font-body);letter-spacing:.02em;color:var(--muted)}
+.gtab{padding:4px 6px 6px}.gr{display:grid;grid-template-columns:22px 1fr 30px 62px 34px;gap:6px;align-items:center;padding:9px 8px;border-top:1px solid var(--line);font-size:14px;font-variant-numeric:tabular-nums}
+.gr.hd{border-top:0;color:var(--muted);font-size:12px;font-weight:700}.gr .gn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.gr.q{background:linear-gradient(90deg,rgba(25,227,138,.16),transparent);border-radius:10px}.gr.mine .gn{color:var(--accent,#FFD23F)}.gr b{text-align:right;font-size:16px}
+.gdays{margin-top:8px}.gday>summary{padding:12px 14px;font-weight:700;cursor:pointer;list-style:none}.gday>summary small{color:var(--muted);font-weight:500}.gday>summary::-webkit-details-marker{display:none}
+.gday:not(:first-child){border-top:1px solid var(--line)}
+.cuptag{display:inline-flex;align-items:center;gap:3px;margin-left:8px;vertical-align:2px;padding:3px 9px;border-radius:999px;background:linear-gradient(100deg,#8A1633,#C8472B 55%,#F2B124);color:#fff;font:800 11px/1 var(--font-body);white-space:nowrap}
+.carnet .cuptag{margin:6px 0 0;vertical-align:baseline}
+.pd .cuptag{display:flex;width:max-content;max-width:100%;margin:3px auto 0;font-size:9.5px;padding:2px 7px}
 /*THEME-END*/
 </style>
 
@@ -1285,7 +1295,7 @@ function fbErr(e){
 }
 function softRender(){var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&$('#view').contains(a))return;render()}
 function mergeRules(r){var d={anon:false,perDay:18,bonus:0.01,src:'helios',budget:40,cap:false,clause:false,debt:20,ideal:0,clubMax:0,offerDays:2,lockDays:14,clauseMult:1.5,clauseGiven:0,clauseTaken:0,clauseLock:true,clauseDouble:false,copa:null,inj:{},sus:{},start:'random'},o={};Object.keys(d).forEach(function(k){o[k]=(r&&r[k]!==undefined)?r[k]:d[k]});if(!(o.perDay>=18))o.perDay=18;return o}
-function payload(){return {uid:S.user.uid,name:S.user.name,fav:S.fav||'',cash:+S.cash.toFixed(2),v:REAL?2:1,rev:S.rev||0,coach:REAL?(S.coach!=null?toA(S.coach):null):null,cap:REAL?(S.cap!=null?toA(S.cap):null):null,selling:(function(){var o={};if(REAL)S.listings.forEach(function(l){if(l.seller==='Tú'&&P[l.id])o[P[l.id].a]=l.ask});return o})(),squad:S.squad.map(toA),lineup:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},role:(function(){var o={};Object.keys(S.role).forEach(function(k){var a=toA(+k);if(a!=null)o[a]=S.role[k]});return o})(),formation:S.formation,saved:S.saved,tot:S.myTot,j:(function(){var ks=Object.keys(S.rp||{}).map(Number).sort(function(a,b){return a-b});return REAL?(ks.length?S.rp[ks[ks.length-1]]:0):lineupPts()})(),rp:S.rp||{},r0:S.r0==null?null:S.r0,pm:S.pm||{},shAt:S.shAt||0,bp:S.bp||{},ip:S.ip||{},ph:S.ph||'',dr:!!S.dr,ln:S.ln||{},lo:S.lo||{},val:+teamValue().toFixed(2),pl:S.squad.length}}
+function payload(){return {uid:S.user.uid,name:S.user.name,fav:S.fav||'',cash:+S.cash.toFixed(2),v:REAL?2:1,rev:S.rev||0,coach:REAL?(S.coach!=null?toA(S.coach):null):null,cap:REAL?(S.cap!=null?toA(S.cap):null):null,selling:(function(){var o={};if(REAL)S.listings.forEach(function(l){if(l.seller==='Tú'&&P[l.id])o[P[l.id].a]=l.ask});return o})(),squad:S.squad.map(toA),lineup:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},role:(function(){var o={};Object.keys(S.role).forEach(function(k){var a=toA(+k);if(a!=null)o[a]=S.role[k]});return o})(),formation:S.formation,saved:S.saved,tot:S.myTot,j:(function(){var ks=Object.keys(S.rp||{}).map(Number).sort(function(a,b){return a-b});return REAL?(ks.length?S.rp[ks[ks.length-1]]:0):lineupPts()})(),rp:S.rp||{},r0:S.r0==null?null:S.r0,pm:S.pm||{},shAt:S.shAt||0,bp:S.bp||{},ip:S.ip||{},ph:S.ph||'',cup:(REAL&&S.user?myCup():null)||null,dr:!!S.dr,ln:S.ln||{},lo:S.lo||{},val:+teamValue().toFixed(2),pl:S.squad.length}}
 function saveNow(){
   clearTimeout(saveT);saveT=null;
   if(!CLOUD||!S.user||!S.lg.id||loadingLeague)return;
@@ -1359,7 +1369,7 @@ function startLeagues(){
     LD={};
     S.leagues=qs.docs.map(function(d){var x=d.data();LD[d.id]=x;return {id:d.id,name:x.name,admin:x.adminUid===S.user.uid,code:x.code,n:(x.memberUids||[]).length,sum:null}});
     var cur=S.leagues.filter(function(l){return l.id===S.lg.id})[0];
-    if(cur){S.lg=cur;S.rules=mergeRules(LD[cur.id].rules)}
+    if(cur){S.lg=cur;S.rules=mergeRules(LD[cur.id].rules);try{var mc=myCup();if(mc!==S.cupSeen){S.cupSeen=mc;queueSave()}}catch(e){}}
     else if(S.lg.id){detachMembers();S.lg=NOLG();S.rv=[];S.tab='leagues'}
     if(pendingEnter&&S.leagues.some(function(l){return l.id===pendingEnter})){var id=pendingEnter;pendingEnter=null;cloudEnter(id)}
     else if(!S.lg.id&&!busy&&!pendingEnter&&!loadingLeague&&S.leagues.length){
@@ -1413,7 +1423,7 @@ function cloudEnter(id){
             if(x.v===2&&(x.rev||0)>(S.rev||0)){var wd=S.dr;applyMember(x);if(wd&&!S.dr&&S.squad.length>=11&&lineupN()===0){applyFormation(S.formation||'4-3-3');S.saved=false;lastSaved='';queueSave()}else lastSaved=JSON.stringify(payload());toast('Tu plantilla y tu saldo se han actualizado')}
             return;
           }
-          arr.push({uid:m.id,n:x.name||'Mánager',tot:x.tot||0,j:x.j||0,val:x.val||0,cash:0,pl:x.pl||0,sq:x.squad||[],sell:x.selling||{},lu:x.lineup||null,co:x.coach==null?null:x.coach,cp:x.cap==null?null:x.cap,rp:x.rp||{},r0:x.r0==null?null:x.r0,pm:x.pm||{},ph:x.ph||'',fav:x.fav||''});
+          arr.push({uid:m.id,n:x.name||'Mánager',tot:x.tot||0,j:x.j||0,val:x.val||0,cash:0,pl:x.pl||0,sq:x.squad||[],sell:x.selling||{},lu:x.lineup||null,co:x.coach==null?null:x.coach,cp:x.cap==null?null:x.cap,rp:x.rp||{},r0:x.r0==null?null:x.r0,pm:x.pm||{},ph:x.ph||'',fav:x.fav||'',cup:x.cup||null});
         });
         S.rv=arr;rebuildListings();softRender();
       },function(e){toast(fbErr(e))});
@@ -1676,7 +1686,7 @@ function carnet(){
   var r=ranking(true),i=r.findIndex(function(m){return m.me}),me=r[i];if(!me)return '';
   var fc=favCol(S.fav),fnd=meFounder();
   return '<div class="carnet"'+(fc?' style="--f1:'+fc[0]+';--f2:'+fc[1]+'"':'')+'>'+(S.fav?'<span class="fwrap" aria-hidden="true"><span class="fwm big">'+crest(S.fav,170)+'</span></span>':'')+
-    '<div class="cn-top">'+mav({n:S.user.name||'Tú',ph:S.ph||''},'xl')+'<div class="cn-id"><b class="cn-n">'+esc(S.user.name||'Tú')+'</b><small>'+esc(S.lg.name)+' · '+(S.lg.admin?'Administrador':'Mánager')+'</small>'+(fnd?'<span class="fndtag">'+CROWNI+'Fundador</span>':'')+'</div>'+
+    '<div class="cn-top">'+mav({n:S.user.name||'Tú',ph:S.ph||''},'xl')+'<div class="cn-id"><b class="cn-n">'+esc(S.user.name||'Tú')+'</b><small>'+esc(S.lg.name)+' · '+(S.lg.admin?'Administrador':'Mánager')+'</small>'+(fnd?'<span class="fndtag">'+CROWNI+'Fundador</span>':'')+cupTag(S.user.uid)+'</div>'+
     '<div class="cn-rk"><b>'+(i+1)+'º</b><small>de '+r.length+'</small></div></div>'+
     '<div class="cn-st"><div><b><span data-cu="'+me.tot+'" data-key="cn-tot-'+S.lg.id+'">'+me.tot+'</span></b><small>Puntos</small></div><div><b>'+me.j+'</b><small>'+(REAL&&(me.live?CUR:LAST)?'Pts J'+(me.live?CUR:LAST):'Jornada')+'</small></div><div><b>'+fmt(me.val)+'</b><small>Valor</small></div><div><b>'+fmt(S.cash)+'</b><small>Saldo</small></div></div></div>';
 }
@@ -1685,7 +1695,7 @@ function podiumHtml(r,k,pm){
   var order=[1,0,2];
   return '<div class="podium">'+order.map(function(ix){
     var m=r[ix],pl=ix+1,fnd=m.me?m.fnd:isFounder(m.uid);
-    return '<button class="pd pd'+pl+(m.me?' me':'')+(fnd?' fnd':'')+'" data-a="mgr" data-n="'+esc(m.n)+'"><span class="pdav">'+(pl===1?CROWN:'')+mav(m)+(REAL&&m.fav?'<span class="pdcr">'+crest(m.fav,pl===1?30:26)+'</span>':'')+'</span><span class="pdn">'+esc(m.n)+'</span>'+(fnd?'<span class="fndtag">'+CROWNI+'Fundador</span>':'')+'<span class="pdp"><span data-cu="'+m[k]+'" data-key="pd-'+k+'-'+esc(m.n)+'">'+num(m[k])+'</span> pts</span>'+trendHtml(pm,m,pl)+'<span class="pdb">'+pl+'</span></button>';
+    return '<button class="pd pd'+pl+(m.me?' me':'')+(fnd?' fnd':'')+'" data-a="mgr" data-n="'+esc(m.n)+'"><span class="pdav">'+(pl===1?CROWN:'')+mav(m)+(REAL&&m.fav?'<span class="pdcr">'+crest(m.fav,pl===1?30:26)+'</span>':'')+'</span><span class="pdn">'+esc(m.n)+'</span>'+(REAL?cupTag(m.me?S.user.uid:m.uid):'')+(fnd?'<span class="fndtag">'+CROWNI+'Fundador</span>':'')+'<span class="pdp"><span data-cu="'+m[k]+'" data-key="pd-'+k+'-'+esc(m.n)+'">'+num(m[k])+'</span> pts</span>'+trendHtml(pm,m,pl)+'<span class="pdb">'+pl+'</span></button>';
   }).join('')+'</div>';
 }
 function trendHtml(pm,m,pos){
@@ -2350,10 +2360,55 @@ function copaCfg(){var c=S.rules&&S.rules.copa;return c&&c.on?c:null}
 function copaDrawn(c){return !!(c&&c.uids&&c.uids.length>=2&&c.rounds&&c.rounds.length)}
 function copaLegs(c){return c&&+c.legs===2?2:1}
 function copaNeed(n){return Math.max(1,Math.ceil(Math.log(Math.max(n,2))/Math.LN2-1e-9))}
-function copaTotal(n,c){return copaNeed(n)*copaLegs(c)}
+function copaFmt(c){return c&&c.fmt==='groups'?'groups':'ko'}
+function copaGN(n){return n>=12?4:n>=6?2:1}
+function copaQ(n){var g=copaGN(n);return g===1?(n>=5?4:2):g*2}
+function copaGM(n){var k=Math.ceil(n/copaGN(n));return k%2?k:k-1}
+function copaKOr(n,c){return copaFmt(c)==='groups'?Math.round(Math.log(copaQ(n))/Math.LN2):copaNeed(n)}
+function copaTotal(n,c){return (copaFmt(c)==='groups'?copaGM(n):0)+copaKOr(n,c)*copaLegs(c)}
+function copaPrize(c){return c&&c.prize!=null?+c.prize:20}
 function copaStage(n){return n===2?'Final':n===4?'Semifinales':n===8?'Cuartos de final':n===16?'Octavos de final':'Ronda de '+n}
 function copaName(u){if(S.user&&u===S.user.uid)return S.user.name||'Tú';var m=S.rv.filter(function(x){return x.uid===u})[0];return m?m.n:'Mánager'}
 function copaJ(R){return R.rs.length>1?'jornadas '+R.rs.join(' y '):'jornada '+R.rs[0]}
+function copaGroups(c,rsG,ptsOf,tot,u){
+  var n=u.length,g=copaGN(n),gm=copaGM(n),names='ABCD',G=[],i,k;
+  for(i=0;i<g;i++)G.push({name:names[i],uids:[],days:[],tab:{}});
+  u.forEach(function(id,ix){G[ix%g].uids.push(id)});
+  G.forEach(function(gr){
+    var L=gr.uids.slice();if(L.length%2)L.push(null);
+    var m=L.length,nd=m-1;
+    for(var d=0;d<nd;d++){
+      var ms=[];
+      for(var q=0;q<m/2;q++){var a=L[q],b=L[m-1-q];if(a!==null&&b!==null)ms.push([a,b])}
+      gr.days.push({r:rsG[d],ms:ms});
+      L.splice(1,0,L.pop());
+    }
+    gr.uids.forEach(function(id){gr.tab[id]={u:id,pj:0,g:0,e:0,p:0,pf:0,pc:0,pts:0}});
+    gr.days.forEach(function(dy){
+      var o=ptsOf(dy.r);
+      dy.ties=dy.ms.map(function(mm){
+        var a=mm[0],b=mm[1],pa=o.show?(o.pts[a]||0):null,pb=o.show?(o.pts[b]||0):null,w;
+        if(o.done){
+          var ta=gr.tab[a],tb=gr.tab[b];ta.pj++;tb.pj++;ta.pf+=pa;ta.pc+=pb;tb.pf+=pb;tb.pc+=pa;
+          if(pa>pb){ta.g++;ta.pts+=3;tb.p++;w=a}else if(pb>pa){tb.g++;tb.pts+=3;ta.p++;w=b}else{ta.e++;tb.e++;ta.pts++;tb.pts++}
+        }
+        return {a:a,b:b,pa:pa,pb:pb,w:w,legs:[]};
+      });
+    });
+    gr.rows=gr.uids.map(function(id){return gr.tab[id]}).sort(function(x,y){
+      return y.pts-x.pts||(y.pf-y.pc)-(x.pf-x.pc)||y.pf-x.pf||(tot[y.u]||0)-(tot[x.u]||0)||(String(x.u)<String(y.u)?-1:1)
+    });
+  });
+  var done=rsG.every(function(r){return ptsOf(r).done}),pairs=[];
+  var W=function(gi,pos){return done&&G[gi].rows[pos]?G[gi].rows[pos].u:undefined};
+  if(g===1){
+    pairs=copaQ(n)===4?[[W(0,0),W(0,3)],[W(0,1),W(0,2)]]:[[W(0,0),W(0,1)]];
+  }else{
+    var ord=[];for(i=0;i<g;i+=2)ord.push(i);for(i=1;i<g;i+=2)ord.push(i);
+    ord.forEach(function(gi){pairs.push([W(gi,0),W(gi^1,1)])});
+  }
+  return {groups:G,done:done,pairs:pairs,gm:gm,rs:rsG};
+}
 function copaBracket(){
   var c=copaCfg();if(!REAL||!FIX||!copaDrawn(c))return null;
   var legs=copaLegs(c);
@@ -2364,13 +2419,18 @@ function copaBracket(){
   var cur=[];for(var k=0;k<S2/2;k++)cur.push([slots[k],slots[S2-1-k]]);
   var rs=c.rounds.slice().map(Number).sort(function(a,b){return a-b}),done=roundsDone(),tot={};
   ranking(true).forEach(function(m){tot[m.me?S.user.uid:m.uid]=m.tot});
-  var out=[],champ,ptsBy={};
+  var out=[],champ,ptsBy={},gs=null;
   var ptsOf=function(r){
     if(ptsBy[r])return ptsBy[r];
     var isDone=done.indexOf(r)>-1,isLive=!isDone&&r===CUR&&liveOn(),o={done:isDone,live:isLive,show:isDone||isLive,pts:{}};
     if(o.show)newsPts(r).forEach(function(e){o.pts[e.uid]=e.pts});
     return (ptsBy[r]=o);
   };
+  if(copaFmt(c)==='groups'){
+    var gm=copaGM(u.length);
+    gs=copaGroups(c,rs.slice(0,gm),ptsOf,tot,u);
+    cur=gs.pairs;rs=rs.slice(gm);
+  }
   for(var st=0;st*legs<rs.length;st++){
     var lr=rs.slice(st*legs,st*legs+legs),L=lr.map(ptsOf);
     var allDone=L.every(function(o){return o.done}),anyOn=L.some(function(o){return o.show});
@@ -2391,7 +2451,7 @@ function copaBracket(){
     champ=ties[0]?ties[0].w:undefined;
     cur=nx;
   }
-  return {rounds:out,champ:champ,size:S2,legs:legs};
+  return {rounds:out,champ:champ,size:S2,legs:legs,groups:gs};
 }
 function copaTieHtml(t){
   var nm=function(u,win){return '<span class="cpn'+(win?' w':'')+(u===(S.user&&S.user.uid)?' mine':'')+'">'+(u===undefined?'<i>Por decidir</i>':u===null?'<i>Pasa directo</i>':esc(copaName(u)))+'</span>'};
@@ -2403,59 +2463,88 @@ function copaTieHtml(t){
 }
 function copaMine(br){
   var me=S.user.uid,last=null;
+  if(br.groups){
+    var gi=br.groups.groups.filter(function(g){return g.uids.indexOf(me)>-1})[0];
+    if(!gi)return null;
+    if(!br.groups.done)return {st:'grp',g:gi,pos:gi.rows.map(function(r){return r.u}).indexOf(me)+1};
+  }
   for(var i=0;i<br.rounds.length;i++){
     var R=br.rounds[i],t=R.ties.filter(function(x){return x.a===me||x.b===me})[0];
     if(!t)continue;last={R:R,t:t};
     if(t.w===undefined)return {st:'next',R:R,t:t};
     if(t.w!==me)return {st:'out',R:R,t:t};
   }
-  return last&&br.champ===me?{st:'champ'}:last?{st:'wait',R:last.R,t:last.t}:null;
+  return last&&br.champ===me?{st:'champ'}:last?{st:'wait',R:last.R,t:last.t}:br.groups?{st:'outg'}:null;
 }
 function copaCard(){
   var c=copaCfg();if(!REAL||!c)return '';
   var br=copaBracket(),txt;
   if(!br)txt='Pendiente de sorteo';
   else if(br.champ){txt='Campeón: '+esc(copaName(br.champ))}
-  else{var m=copaMine(br);txt=!m?'Mira el cuadro':m.st==='out'?'Eliminado en '+m.R.stage.toLowerCase():m.st==='champ'?'¡Eres el campeón!':m.R.stage+' · '+copaJ(m.R)}
+  else{var m=copaMine(br);txt=!m?'Mira el cuadro':m.st==='grp'?'Grupo '+m.g.name+' · vas '+m.pos+'º':m.st==='outg'?'Eliminado en la fase de grupos':m.st==='out'?'Eliminado en '+m.R.stage.toLowerCase():m.st==='champ'?'¡Eres el campeón!':m.R.stage+' · '+copaJ(m.R)}
   return '<button class="copacard" data-a="copaOpen"><span class="cc-i">🏆</span><span class="cc-t"><b>Copa de la liga</b><small>'+txt+'</small></span><span class="cc-g">Ver cuadro</span></button>';
 }
 function viewCopa(){
   var c=copaCfg();
   var how='<details class="cup-how"'+((!c||!copaDrawn(c)||!(copaBracket()||{rounds:[]}).rounds.some(function(r){return r.state==='done'}))?' open':'')+'><summary>Cómo funciona la Copa</summary><ol>'+
-   '<li>Es una eliminatoria entre los mánagers de la liga, como la Copa del Rey. Va aparte de la clasificación: no cambia tus puntos.</li>'+
+   '<li>Es una competición entre los mánagers de la liga, como la Copa del Rey. Va aparte de la clasificación: no cambia tus puntos.</li>'+
+   (copaFmt(c)==='groups'?'<li><b>Fase de grupos:</b> los mánagers se reparten en grupos al azar y todos juegan contra todos, una vez. Cada partido se decide por los puntos de la jornada: ganas 3, empatas 1 y pierdes 0. Pasan los dos primeros de cada grupo (si es un solo grupo grande, los cuatro primeros). Si hay empate en la tabla, decide la diferencia de puntos y luego los puntos a favor.</li><li><b>Después:</b> eliminatoria directa entre los clasificados hasta la final.</li>':'')+
    '<li>Cada ronda se juega en jornadas de LaLiga que ha elegido el administrador. Gana quien más puntos sume con su alineación (el capitán cuenta doble).</li>'+
    '<li>'+(copaLegs(c)===2?'<b>Ida y vuelta:</b> cada cruce se juega en dos jornadas y se suman los puntos de las dos. Pasa quien tenga más puntos en total.':'Cada cruce se juega en una sola jornada.')+'</li>'+
    '<li>Para jugar solo tienes que dejar tu alineación guardada antes de que empiece cada jornada. Sin alineación, sumas 0.</li>'+
    '<li>Si empatáis, pasa quien vaya mejor en la clasificación general.</li>'+
-   '<li>Si no salen cruces exactos, algunos mánagers pasan de ronda sin jugar en la primera.</li>'+
-   '<li>Quien gane todas las rondas es el campeón: se lleva la medalla 🏆 y sale en la portada de La Gaceta Helios.</li>'+
+   (copaFmt(c)==='groups'?'':'<li>Si no salen cruces exactos, algunos mánagers pasan de ronda sin jugar en la primera.</li>')+
+   '<li>Quien gane la final es el campeón: se lleva la medalla 🏆 y sale en la portada de La Gaceta Helios.</li>'+
+   '<li><b>Premio:</b> el campeón empieza la próxima temporada con <b>+'+fmt(copaPrize(c))+'</b> extra de presupuesto (lo fija el administrador) y lleva el distintivo <b>🏆 Campeón de Copa</b> durante toda la temporada siguiente, en cualquier liga en la que juegue.</li>'+
    '<li>Entran los mánagers que estén en la liga cuando se hace el sorteo.</li></ol></details>';
   if(!c)return '<h2>Copa</h2><div class="panel pad" style="margin-top:10px"><b>Esta liga no juega la Copa.</b><p class="small muted" style="margin:6px 0 0">'+(S.lg.admin?'Puedes activarla en Ajustes de la liga.':'Si quieres jugarla, pídeselo al administrador.')+'</p></div>'+how;
   var br=copaBracket();
   if(!br)return '<h2>Copa</h2><div class="panel pad" style="margin-top:10px"><b>La Copa está activada, pero aún no se ha sorteado.</b><p class="small muted" style="margin:6px 0 0">'+(S.lg.admin?'Elige las jornadas y haz el sorteo en Ajustes de la liga.':'El administrador la sorteará pronto y verás aquí el cuadro.')+'</p></div>'+how;
   var m=copaMine(br),me='';
-  if(br.champ)me='<div class="cup-champ"><span>🏆</span><div><small>Campeón de la Copa</small><b>'+esc(copaName(br.champ))+(br.champ===S.user.uid?' (tú)':'')+'</b></div></div>';
+  if(br.champ)me='<div class="cup-champ"><span>🏆</span><div><small>Campeón de la Copa</small><b>'+esc(copaName(br.champ))+(br.champ===S.user.uid?' (tú)':'')+'</b><small>Premio: +'+fmt(copaPrize(c))+' para empezar la próxima temporada y distintivo de campeón</small></div></div>';
+  else if(m&&m.st==='grp')me='<div class="cup-me"><b>Fase de grupos: vas '+m.pos+'º en el grupo '+esc(m.g.name)+'.</b><br>Pasan los dos primeros.</div>';
+  else if(m&&m.st==='outg')me='<div class="cup-me"><b>Has caído en la fase de grupos.</b> Gracias por jugar; sigue el cuadro.</div>';
   else if(m){
     var op=m.t?(m.t.a===S.user.uid?m.t.b:m.t.a):null,on=op===undefined?'un rival por decidir':op===null?'nadie (pasas directo)':esc(copaName(op));
     me='<div class="cup-me">'+(m.st==='out'?'<b>Has caído en '+esc(m.R.stage.toLowerCase())+'.</b> Gracias por jugar; sigue el cuadro.':m.st==='champ'?'<b>¡Eres el campeón!</b>':'<b>Tu próximo cruce: '+esc(m.R.stage.toLowerCase())+', '+copaJ(m.R)+'</b><br>Rival: '+on+'.')+'</div>';
   }
-  var body=br.rounds.map(function(R){
+  var body=(br.groups?'<h3 class="cup-ph">Fase de grupos · '+br.groups.rs.map(function(r){return 'J'+r}).join(', ')+'</h3>'+copaGroupsHtml(br)+'<h3 class="cup-ph">Eliminatoria</h3>':'')+br.rounds.map(function(R){
     return '<section><h3>'+R.stage+' · '+copaJ(R)+' <span class="cst '+R.state+'">'+(R.state==='done'?'Terminada':R.state==='live'?'En juego':'Pendiente')+'</span></h3><div class="panel">'+R.ties.map(copaTieHtml).join('')+'</div></section>';
   }).join('');
-  return '<h2>Copa</h2><div class="small muted" style="margin:2px 0 0">'+esc(S.lg.name)+' · '+c.uids.length+' mánagers · '+br.rounds.length+(br.rounds.length===1?' ronda':' rondas')+(br.legs===2?' · ida y vuelta':'')+'</div>'+me+body+how;
+  return '<h2>Copa</h2><div class="small muted" style="margin:2px 0 0">'+esc(S.lg.name)+' · '+c.uids.length+' mánagers · '+(br.groups?'grupos + ':'')+br.rounds.length+(br.rounds.length===1?' ronda':' rondas')+(br.legs===2?' · ida y vuelta':'')+'</div>'+me+body+how;
 }
+function copaGroupsHtml(br){
+  var G=br.groups,me=S.user.uid;
+  return G.groups.map(function(g){
+    var tb='<div class="gtab"><div class="gr hd"><span>#</span><span>Mánager</span><span>PJ</span><span>G-E-P</span><span>Pts</span></div>'+g.rows.map(function(r,i){
+      var q=G.done&&i<(copaGN(S2n(G))===1?copaQ(S2n(G)):2);
+      return '<div class="gr'+(r.u===me?' mine':'')+(q?' q':'')+'"><span>'+(i+1)+'</span><span class="gn">'+esc(copaName(r.u))+'</span><span>'+r.pj+'</span><span>'+r.g+'-'+r.e+'-'+r.p+'</span><b>'+r.pts+'</b></div>';
+    }).join('')+'</div>';
+    var dl=g.days.filter(function(d){return d.ties.length}),lastP=-1;dl.forEach(function(d,i){if(d.ties.some(function(t){return t.pa!=null}))lastP=i});
+    var ds=dl.map(function(d,i){
+      return '<details class="gday"'+(i===lastP?' open':'')+'><summary>Jornada '+d.r+' <small>(partido '+(i+1)+' de grupo)</small></summary>'+d.ties.map(copaTieHtml).join('')+'</details>';
+    }).join('');
+    return '<section><h3>Grupo '+g.name+'</h3><div class="panel">'+tb+'</div><div class="panel gdays">'+ds+'</div></section>';
+  }).join('');
+}
+function S2n(G){var n=0;G.groups.forEach(function(g){n+=g.uids.length});return n}
 function copaAdminHtml(){
   if(!S.lg.admin||!REAL||!CLOUD)return '';
   var c=S.rules.copa,on=!!(c&&c.on),n=S.rv.length+1,legs=copaLegs(c),need=copaTotal(n,c),drawn=copaDrawn(c);
   var h='<section><h3>Copa entre mánagers</h3><div class="panel"><div class="setrow"><div><b>Jugar la Copa</b><p>Eliminatorias entre los mánagers, como la Copa del Rey. Gana quien más puntos haga en las jornadas de LaLiga que elijas. Es independiente de la clasificación.</p></div><button class="sw" role="switch" aria-label="Jugar la Copa" aria-checked="'+on+'" data-a="copaToggle"><span></span></button></div>';
   if(on&&!drawn){
     var sel=(c.rounds||[]).map(Number),list=[];for(var r=(CUR||0)+1;r<=38;r++)list.push(r);
-    h+='<div class="setrow" style="display:block"><b>Formato</b><p>Con ida y vuelta hay el doble de partidos: cada cruce se juega en dos jornadas y se suman los puntos.</p><div class="seg" role="group" aria-label="Formato de la Copa"><button data-a="copaLegs" data-n="1" aria-pressed="'+(legs===1)+'">Un partido</button><button data-a="copaLegs" data-n="2" aria-pressed="'+(legs===2)+'">Ida y vuelta</button></div></div>'+
-      '<div class="setrow" style="display:block"><b>Jornadas de la Copa</b><p>Con '+n+' mánagers hacen falta <b>'+need+'</b> jornada'+(need>1?'s':'')+' ('+copaNeed(n)+(copaNeed(n)>1?' rondas':' ronda')+(legs===2?', ida y vuelta':'')+'). Elige cada una de LaLiga. Llevas <b>'+sel.length+'</b> de '+need+'.'+(legs===2?' Cada dos seguidas de las que elijas forman una ronda.':'')+'</p>'+
+    h+='<div class="setrow" style="display:block"><b>Tipo de Copa</b><p>'+(copaFmt(c)==='groups'?(n>=12?'Con '+n+' mánagers: 4 grupos y los dos primeros pasan a cuartos.':n>=6?'Con '+n+' mánagers: 2 grupos (todos contra todos) y los dos primeros de cada uno pasan a semifinales.':'Con '+n+' mánagers: un solo grupo y pasan a la fase final '+copaQ(n)+'.'):'Eliminatoria directa: pierdes y estás fuera.')+' Los grupos dan muchos más partidos a todos.</p><div class="seg fit" role="group" aria-label="Tipo de Copa"><button data-a="copaFmt" data-f="groups" aria-pressed="'+(copaFmt(c)==='groups')+'">Grupos + eliminatoria</button><button data-a="copaFmt" data-f="ko" aria-pressed="'+(copaFmt(c)==='ko')+'">Eliminatoria directa</button></div></div>'+
+      '<div class="setrow" style="display:block"><b>Formato de las eliminatorias</b><p>Con ida y vuelta hay el doble de partidos: cada cruce se juega en dos jornadas y se suman los puntos.</p><div class="seg fit" role="group" aria-label="Formato de la Copa"><button data-a="copaLegs" data-n="1" aria-pressed="'+(legs===1)+'">Un partido</button><button data-a="copaLegs" data-n="2" aria-pressed="'+(legs===2)+'">Ida y vuelta</button></div></div>'+
+      '<div class="setrow" style="display:block"><b>Jornadas de la Copa</b><p>Con '+n+' mánagers hacen falta <b>'+need+'</b> jornada'+(need>1?'s':'')+' ('+(copaFmt(c)==='groups'?copaGM(n)+' de grupos + ':'')+copaKOr(n,c)+(copaKOr(n,c)>1?' rondas':' ronda')+' de eliminatoria'+(legs===2?', ida y vuelta':'')+'). Elige cada una de LaLiga, en orden: las primeras son de grupos. Llevas <b>'+sel.length+'</b> de '+need+'.'+(legs===2?' Cada dos seguidas de las que elijas forman una ronda.':'')+'</p>'+
       '<div class="jbar" role="group" aria-label="Jornadas de la Copa">'+list.map(function(r){var on2=sel.indexOf(r)>-1;return '<button class="jb'+(on2?' on':'')+'" data-a="copaPick" data-r="'+r+'" aria-pressed="'+on2+'"><b>J'+r+'</b></button>'}).join('')+'</div></div>'+
       '<div class="setrow" style="display:block"><button class="btn primary full" data-a="copaDraw"'+((n<2||sel.length!==need)?' disabled':'')+'>Sortear la Copa</button><p class="small muted" style="margin:8px 0 0">'+(n<2?'Hace falta al menos un amigo en la liga.':'Al sortear entran los '+n+' mánagers actuales y los cruces se reparten al azar. Ya no se podrán cambiar las jornadas.')+'</p></div>';
   }else if(on&&drawn){
     h+='<div class="setrow" style="display:block"><b>Copa sorteada'+(legs===2?' · ida y vuelta':'')+'</b><p>Jornadas: '+(c.rounds||[]).map(Number).sort(function(a,b){return a-b}).map(function(r){return 'J'+r}).join(', ')+'. Los cruces se calculan solos con los puntos de cada jornada. Para cancelarla, apaga el interruptor.</p><button class="btn ghost sm" data-a="copaOpen">Ver cuadro</button></div>';
+  }
+  if(on){
+    var pz=copaPrize(c);
+    h+='<div class="setrow" style="display:block"><b>Premio del campeón</b><p>Dinero extra que tendrá el campeón al empezar la próxima temporada (cuando reinicies la liga). Además lleva el distintivo 🏆 durante toda la temporada siguiente en cualquier liga.</p><div class="seg" role="group" aria-label="Premio de la Copa"><button data-a="copaPrize" data-n="-5" aria-label="Quitar 5 millones">−5 M</button><button aria-pressed="true" data-a="noop">+'+fmt(pz)+'</button><button data-a="copaPrize" data-n="5" aria-label="Añadir 5 millones">+5 M</button></div></div>';
   }
   return h+'</div></section>';
 }
@@ -2484,9 +2573,20 @@ function medals(){
   MEDC=out;MEDK=key;return out;
 }
 function medOf(uid){return medals()[uid]||{g:0,s:0,b:0,big:0,best:0,run:0,cup:0,last:null}}
+function cupValid(s){var a=parseInt(s,10),b=parseInt((FIX&&FIX.season)||'',10);return a>0&&b>0&&b-a>=0&&b-a<=1}
+function myCup(){
+  var best=null;if(!S.user)return null;
+  Object.keys(LD||{}).forEach(function(id){var r=LD[id].rules,ch=r&&r.copa&&r.copa.champ;if(ch&&ch.uid===S.user.uid&&cupValid(ch.season)&&(!best||ch.season>best))best=ch.season});
+  return best;
+}
+function cupOf(uid){
+  if(S.user&&uid===S.user.uid)return myCup();
+  var m=S.rv.filter(function(x){return x.uid===uid})[0];return m&&m.cup&&cupValid(m.cup)?m.cup:null;
+}
+function cupTag(uid){var s=cupOf(uid);return s?'<span class="cuptag" title="Campeón de Copa '+esc(s)+'">🏆 Campeón de Copa</span>':''}
 function medTag(uid){
   var m=medOf(uid),k=m.g?['🥇',m.g]:m.s?['🥈',m.s]:m.b?['🥉',m.b]:null;
-  return k?'<span class="mdl" title="Medallas de jornada">'+k[0]+k[1]+'</span>':'';
+  return (k?'<span class="mdl" title="Medallas de jornada">'+k[0]+k[1]+'</span>':'')+cupTag(uid);
 }
 function medShelf(uid,who){
   var m=medOf(uid),tot=m.g+m.s+m.b;
@@ -2595,7 +2695,9 @@ function newsHtml(r){
   var posOf=function(x){return full.filter(function(y){return y.pts>x.pts}).length+1};
   var rBox='<div class="np-gen"><h4>La jornada, uno a uno</h4><ol>'+full.map(function(x){return '<li><span>'+posOf(x)+'. '+esc(x.n)+(x.me?' (tú)':'')+'</span><span>'+x.pts+' pts</span></li>'}).join('')+'</ol></div>';
   var done0=function(q){return roundsDone().indexOf(q)>-1},cpB='',cb=copaBracket(),cR=cb&&cb.rounds.filter(function(x){return x.rs.indexOf(r)>-1&&(x.state==='done'||(x.state==='live'&&x.rs[0]===r&&done0(r)))})[0];
-  if(cR)cpB='<div class="np-gen"><h4>Copa: '+esc(cR.stage)+(cR.rs.length>1?(cR.rs[0]===r?' (ida)':' (vuelta)'):'')+'</h4><div class="np-cup">'+cR.ties.map(copaTieHtml).join('')+'</div>'+(cb.champ&&cR.n===2&&cR.state==='done'?'<p><b>'+esc(copaName(cb.champ))+' se proclama campeón de la Copa.</b></p>':'')+'</div>';
+  var gD=null;if(cb&&cb.groups)cb.groups.groups.forEach(function(g){g.days.forEach(function(d){if(d.r===r&&d.ties.length&&done0(r)){gD=gD||[];gD.push({g:g,d:d})}})});
+  if(gD)cpB+='<div class="np-gen"><h4>Copa: fase de grupos</h4>'+gD.map(function(x){return '<div class="np-cup"><small>Grupo '+x.g.name+'</small>'+x.d.ties.map(copaTieHtml).join('')+'<p class="small">'+x.g.rows.map(function(r2,i){return (i+1)+'º '+esc(copaName(r2.u))+' ('+r2.pts+')'}).join(' · ')+'</p></div>'}).join('')+'</div>';
+  if(cR)cpB+='<div class="np-gen"><h4>Copa: '+esc(cR.stage)+(cR.rs.length>1?(cR.rs[0]===r?' (ida)':' (vuelta)'):'')+'</h4><div class="np-cup">'+cR.ties.map(copaTieHtml).join('')+'</div>'+(cb.champ&&cR.n===2&&cR.state==='done'?'<p><b>'+esc(copaName(cb.champ))+' se proclama campeón de la Copa.</b></p>':'')+'</div>';
   var mm=full.filter(function(x){return x.me})[0];
   var meBox=mm?'<div class="np-me"><span>Tu jornada '+r+': puesto '+posOf(mm)+' de '+full.length+'</span><b>'+mm.pts+' pts</b></div>':'';
   var genBox='<div class="np-gen"><h4>Clasificación general</h4><ol>'+gen.map(function(m,i){return '<li><span>'+(i+1)+'. '+esc(m.n)+'</span><span>'+num(m.tot)+' pts</span></li>'}).join('')+'</ol></div>';
@@ -2653,6 +2755,17 @@ function newsCheck(){
   newsT=setTimeout(function(){newsT=null;try{newsOpen(true)}catch(e){}},1500);
 }
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('#news'))newsClose()});
+var sealing=false;
+function copaSeal(){
+  try{
+    if(sealing||!REAL||!CLOUD||!S.lg||!S.lg.admin||!FIX)return;
+    var c=copaCfg();if(!c||c.champ)return;
+    var br=copaBracket();if(!br||!br.champ)return;
+    sealing=true;
+    c.champ={uid:br.champ,name:copaName(br.champ),season:String(FIX.season||''),prize:copaPrize(c),claimed:false};
+    rulesChanged();setTimeout(function(){sealing=false},4000);
+  }catch(e){sealing=false}
+}
 function render(){
   var nav=$('.nav'),bal=$('#bal');
   if(CLOUD&&!S.authReady){bal.innerHTML='';nav.hidden=true;$('#view').innerHTML='<p class="muted" style="margin-top:24px">Conectando con Firebase…</p>';return}
@@ -2661,7 +2774,7 @@ function render(){
   if(CLOUD&&!S.lg.id&&S.tab!=='leagues')S.tab='leagues';
   nav.hidden=!!(CLOUD&&!S.lg.id);
   if(CLOUD&&loadingLeague){bal.innerHTML='';$('#brandSub').textContent=S.lg.name;$('#view').innerHTML='<p class="muted" style="margin-top:24px">Cargando liga…</p>';return}
-  renderMain();
+  renderMain();copaSeal();
   try{countUp()}catch(e){}
   if(CLOUD&&!S.lg.id)bal.innerHTML='';
   queueSave();
@@ -3077,9 +3190,18 @@ var A={
   copaOpen:function(){S.vm=null;S.tab='copa';window.scrollTo(0,0);render()},
   copaToggle:function(){
     if(!S.lg.admin)return;var c=S.rules.copa;
-    if(c&&c.on){if(copaDrawn(c)&&!window.confirm('La Copa ya está sorteada. Si la apagas se borra el cuadro. ¿Seguro?'))return;S.rules.copa=null}
-    else S.rules.copa={on:true,legs:2,rounds:[],uids:null,seed:0};
+    var keep=c&&c.champ?c.champ:null;
+    if(c&&c.on){if(copaDrawn(c)&&!window.confirm('La Copa ya está sorteada. Si la apagas se borra el cuadro. ¿Seguro?'))return;S.rules.copa=keep?{on:false,champ:keep}:null}
+    else S.rules.copa={on:true,fmt:'groups',legs:2,rounds:[],uids:null,seed:0,prize:20,champ:keep||null};
     rulesChanged();render();
+  },
+  copaFmt:function(d){
+    if(!S.lg.admin)return;var c=S.rules.copa;if(!c||!c.on||copaDrawn(c))return;
+    c.fmt=d.f==='groups'?'groups':'ko';c.rounds=(c.rounds||[]).slice(0,copaTotal(S.rv.length+1,c));rulesChanged();render();
+  },
+  copaPrize:function(d){
+    if(!S.lg.admin)return;var c=S.rules.copa;if(!c||!c.on)return;
+    c.prize=Math.max(0,Math.min(500,copaPrize(c)+(+d.n||0)));rulesChanged();render();
   },
   copaLegs:function(d){
     if(!S.lg.admin)return;var c=S.rules.copa;if(!c||!c.on||copaDrawn(c))return;
@@ -3217,7 +3339,7 @@ var A={
     }).then(function(){S.admMgr=S.user.uid;toast(nm+' ha sido expulsado');render()},function(e){toast(fbErr(e))});
   },
   admReset:function(){
-    if(!window.confirm('¿Reiniciar la liga «'+S.lg.name+'»?\nTodos empiezan de cero con plantilla nueva y '+fmt(S.rules.budget)+'. Se borran mercado, pujas, ofertas e historial. No se puede deshacer.'))return;
+    if(!window.confirm('¿Reiniciar la liga «'+S.lg.name+'»?\nTodos empiezan de cero con plantilla nueva y '+fmt(S.rules.budget)+(S.rules.copa&&S.rules.copa.champ&&!S.rules.copa.champ.claimed?' (el campeón de Copa, '+fmt(S.rules.budget+copaPrize(S.rules.copa))+')':'')+'. Se borran mercado, pujas, ofertas e historial. No se puede deshacer.'))return;
     var lref=db.collection('leagues').doc(S.lg.id),col=lref.collection('members'),R=S.rules;
     mktInit=true;
     var subs=['deals','news','rounds'],used=[];
@@ -3225,7 +3347,8 @@ var A={
       var ops=[],mem=rs[0];
       mem.forEach(function(m){
         var old=m.data();SEED_EX=used.slice();
-        var np=genMember(R.budget,R.src,{admin:false,name:'',code:''});
+        var chp=R.copa&&R.copa.champ,pz=(chp&&chp.uid===m.id&&!chp.claimed)?copaPrize(R.copa):0;
+        var np=genMember(R.budget+pz,R.src,{admin:false,name:'',code:''});
         np.uid=m.id;np.name=old.name||'Mánager';np.ph=old.ph||'';np.rev=(old.rev||0)+1;
         used=used.concat(np.squad||[]);
         ops.push(function(b){b.set(col.doc(m.id),np)});
@@ -3240,6 +3363,8 @@ var A={
       return chunks.reduce(function(p,ch){return p.then(function(){var b=db.batch();ch.forEach(function(f){f(b)});return b.commit()})},Promise.resolve());
     }).then(function(){
       var ow={};used.forEach(function(a){ow[a]=1});initMarketState(ow);
+      var chp2=S.rules.copa&&S.rules.copa.champ;
+      S.rules.copa=chp2?{on:false,champ:{uid:chp2.uid,name:chp2.name,season:chp2.season,prize:chp2.prize,claimed:true}}:null;rulesChanged();
       if(S.rules.start==='draft'){S.rules.start='random';rulesChanged()}
       S.bids={};S.bidsRaw=null;S.admOpen=false;toast('Liga reiniciada');render();
     },function(e){SEED_EX=[];mktInit=false;toast(fbErr(e))});
