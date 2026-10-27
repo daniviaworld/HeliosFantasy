@@ -1861,7 +1861,7 @@ function dealsView(part){
 function opsView(){
   var ot=S.otab==='sell'?'sell':'buy',nIn=inOffers().length;
   var bidIds=Object.keys(S.bids).map(Number).filter(function(id){return S.listings.some(function(l){return l.id===id})}),outN=outDeals().filter(function(d){return d.status==='pending'||d.status==='accepted'}).length,nBuy=bidIds.length+outN;
-  var sub='<div class="seg" role="group" aria-label="Mis operaciones" style="margin-top:10px"><button data-a="otab" data-o="buy" aria-pressed="'+(ot==='buy')+'">Compra'+(nBuy?' ('+nBuy+')':'')+'</button><button data-a="otab" data-o="sell" aria-pressed="'+(ot==='sell')+'">Venta'+(nIn?' ('+nIn+')':'')+'</button></div>';
+  var sub='<div class="seg fit" role="group" aria-label="Mis operaciones" style="margin-top:10px"><button data-a="otab" data-o="buy" aria-pressed="'+(ot==='buy')+'">Compra'+(nBuy?' ('+nBuy+')':'')+'</button><button data-a="otab" data-o="sell" aria-pressed="'+(ot==='sell')+'">Venta'+(nIn?' ('+nIn+')':'')+'</button></div>';
   var body='';
   if(ot==='buy'){
     body='<h3 style="margin:16px 0 8px">Ofertas de compra · '+nBuy+' jugador'+(nBuy===1?'':'es')+'</h3>';
@@ -1916,7 +1916,7 @@ function viewMarket(){
   var nOff=S.offers.length,tabs=REAL&&CLOUD?[['market','Mercado']].concat(draftTabOn()?[['draft','Draft']]:[],[['ops','Mis ops.'+(offerCount()?' ('+offerCount()+')':'')],['hist','Hist\u00F3rico'],['search','Buscar']]):[['market','Mercado'],['offers','Ofertas ('+nOff+')'],['mine','Mis pujas'],['hist','Historial']];
   if(REAL&&CLOUD){if(S.mtab==='offers'){S.mtab='ops';S.otab='sell'}else if(S.mtab==='mine'){S.mtab='ops';S.otab='buy'}}
   if(REAL&&CLOUD&&!tabs.some(function(t){return t[0]===S.mtab}))S.mtab='market';
-  var seg='<div class="seg" role="group" aria-label="Mercado">'+
+  var seg='<div class="seg fit" role="group" aria-label="Mercado">'+
     tabs.map(function(m){return '<button data-a="mtab" data-m="'+m[0]+'" aria-pressed="'+(S.mtab===m[0])+'">'+m[1]+'</button>'}).join('')+'</div>';
   var body='';
   if(S.mtab==='market'){
