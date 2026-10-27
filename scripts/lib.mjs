@@ -42,7 +42,7 @@ export function makeCodes(teams) {
 
 const TMPOS = { goalkeeper: 'POR', defender: 'DEF', midfield: 'MED', attack: 'DEL' };
 export function buildValueIndex(rows) {
-  const full = new Map(), sur = new Map();
+  const full = new Map(), sur = new Map(), firsts = new Map();
   let maxSeason = 0;
   const add = (m, k, v) => { if (!k) return; if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
   for (const r of rows) {
@@ -51,11 +51,12 @@ export function buildValueIndex(rows) {
     const e = { name: r.name || `${r.first_name || ''} ${r.last_name || ''}`.trim(), val: Number.isFinite(v) ? v : 0, first: norm(r.first_name), club: norm(r.current_club_name), season: Number(r.last_season) || 0, pos: TMPOS[String(r.position || '').toLowerCase()] || null };
     if (e.season > maxSeason) maxSeason = e.season;
     add(full, nm, e);
+    if (e.first) add(firsts, e.first.split(' ')[0], e);
     const ln = norm(r.last_name) || nm.split(' ').slice(-1)[0];
     add(sur, ln, e);
     for (const tk of ln.split(' ')) if (tk.length > 1 && tk !== ln) add(sur, tk, e); // «López Marín» también se encuentra por «López»
   }
-  return { full, sur, maxSeason };
+  return { full, sur, firsts, maxSeason };
 }
 
 // Devuelve {val (millones), clubHits, cands, dubious} o null si no hay coincidencia.
@@ -67,9 +68,10 @@ export function matchValueInfo(idx, apiName, teamName, pos) {
   if (toks.length > 1 && toks[0].length === 1) { initial = toks[0]; sur = toks.slice(1).join(' '); }
   const tn = norm(teamName).split(' ').filter((w) => w.length > 2);
   const hits = (e) => tn.filter((w) => e.club.split(' ').includes(w) || e.club.includes(w)).length;
-  const score = (e) => hits(e) * 1000 + (e.season >= idx.maxSeason - 1 ? 100 : 0) + Math.min(e.val / 1e6, 99);
+  // el club manda (1000 por palabra); la posición solo desempata entre homónimos (a veces API-Football y Transfermarkt no coinciden en extremos y mediapuntas)
+  const score = (e) => hits(e) * 1000 + (pos && e.pos === pos ? 300 : 0) + (e.season >= idx.maxSeason - 1 ? 100 : 0) + Math.min(e.val / 1e6, 99);
   // si conocemos la posición, descartamos homónimos de otra posición (siempre que quede alguno)
-  const byPos = (l) => { if (!pos || !l) return l; const f = l.filter((e) => !e.pos || e.pos === pos); return f.length ? f : l; };
+  const byPos = (l) => l;
   const pick = (l) => (l && l.length ? l.slice().sort((a, b) => score(b) - score(a))[0] : null);
   let hit = null, cands = [];
   if (!initial) { cands = byPos(idx.full.get(n) || []); hit = pick(cands); }
@@ -83,6 +85,11 @@ export function matchValueInfo(idx, apiName, teamName, pos) {
       l = byPos(l);
       if (l.length) { cands = l; hit = pick(l); break; }
     }
+  }
+  // un solo nombre (p. ej. «Fermín»): se busca por nombre de pila, pero solo se acepta si coincide el club
+  if (!hit && toks.length === 1) {
+    const l = (idx.firsts.get(n) || []).filter((e) => hits(e) > 0);
+    if (l.length) { cands = l; hit = pick(l); }
   }
   if (!hit || !(hit.val > 0)) return null;
   const clubHits = hits(hit);

@@ -80,14 +80,15 @@ async function repriceOnly(why) {
     const mi = matchValueInfo(idx, p.n, label[p.t] || p.t, p.p);
     if (WATCH.test(norm(p.n))) watch.push({ p, mi });
     if (!mi) { nomatch++; return p; }
-    if (mi.stale) stale++;
+    // sin ninguna palabra de club en común (archivo con el club anterior o un homónimo): no se fía del cambio, se conserva el precio actual
+    if (mi.clubHits === 0 && !mi.dubious) { stale++; return p; }
     // homónimos sin coincidencia de club: no se fía del cambio, se conserva el precio actual y se avisa
     if (mi.dubious) { dubious.push({ name: p.n, team: label[p.t] || p.t, value: mi.val, matchedClub: mi.club, candidates: mi.cands, now: p.v }); keptAmb++; return p; }
     const v = Math.max(MIN_VALUE, Math.round(mi.val * 100) / 100);
     if (Math.abs(v - p.v) > 1e-9) { changed++; moved.push({ name: p.n, team: p.t, from: p.v, to: v }); return { ...p, v }; }
     same++; return p;
   });
-  console.log(`Precios recalculados: ${changed} cambian, ${same} igual, ${nomatch} sin coincidencia (se conserva su precio), ${keptAmb} dudosos (se conserva su precio), ${manualN} manuales. ${stale} jugadores con club distinto en el archivo (traspasos recientes, se dan por buenos).`);
+  console.log(`Precios recalculados: ${changed} cambian, ${same} igual, ${nomatch} sin coincidencia (se conserva su precio), ${keptAmb} dudosos (se conserva su precio), ${manualN} manuales. ${stale} jugadores con otro club en el archivo (traspasos recientes o homónimos): se conserva su precio.`);
   moved.sort((x, y) => Math.abs(y.to - y.from) - Math.abs(x.to - x.from));
   if (moved.length) { console.log('Cambios:'); for (const m of moved.slice(0, 60)) console.log(`  · ${m.name} (${m.team}): ${m.from} M → ${m.to} M${m.manual ? ' (manual)' : ''}`); }
   if (watch.length) {

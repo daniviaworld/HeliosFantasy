@@ -1,3 +1,5 @@
 {
-  "_ayuda": "Precios que mandan sobre Transfermarkt. Formato: \"Nombre del jugador|CÓDIGO del club\": millones. Ejemplo: \"Fermín López|BAR\": 40. También vale el id: \"123456\": 40."
+  "_ayuda": "Precios que mandan sobre Transfermarkt. Formato: \"Nombre del jugador|CÓDIGO del club\": millones. Ejemplo: \"Fermín López|BAR\": 40. También vale el id: \"123456\": 40.",
+  "Juan Fernandez|MAL": 0.35,
+  "Jesús|GET": 3
 }
