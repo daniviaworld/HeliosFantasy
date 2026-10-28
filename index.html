@@ -997,6 +997,16 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
 .cr{filter:drop-shadow(0 1px 2px rgba(0,0,0,.65))}
 .slot.ownideal::before{background:linear-gradient(150deg,#FFFBD9,#FFD23F 40%,#F29F05 70%,#FFE27A)}
 /*PRO-END*/
+
+/* favoritos */
+.favb{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(255,255,255,.6);background:rgba(8,14,44,.6);color:#fff;padding:0;cursor:pointer;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:0 3px 8px rgba(0,0,0,.35);transition:transform .15s}
+.favb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linejoin:round}
+.favb.on{background:linear-gradient(145deg,#FFE27A,#F2A90F);border-color:#fff;color:#4A2C00}.favb.on svg{fill:currentColor}
+.favb:active{transform:scale(.88)}
+.pcf{position:absolute;top:12px;right:12px;z-index:5}.pcard .pc-r{padding-right:26px}
+.mcard .mf{position:absolute;left:8px;top:8px;z-index:4;width:30px;height:30px}.mcard .mf svg{width:16px;height:16px}
+.favrow{display:flex;align-items:center;gap:8px}.favrow .prow{flex:1;min-width:0}.favrow .rowf{flex:none;background:var(--surface2);color:var(--muted);border-color:var(--line);box-shadow:none}.favrow .rowf.on{color:#4A2C00}
+.seg.fit.n5 button{font-size:12.5px;padding:0 5px}
 /*THEME-END*/
 </style>
 
@@ -1320,7 +1330,7 @@ var RV=[
 
 var now=Date.now();
 var S={
-  tab:'home',mtab:'market',ttab:'lineup',reward:true,role:{},cash:12.8,formation:'4-3-3',saved:true,sort:'tot',
+  tab:'home',mtab:'market',pf:[],pfT:0,ttab:'lineup',reward:true,role:{},cash:12.8,formation:'4-3-3',saved:true,sort:'tot',
   deadline:now+(28*3600+12*60)*1000,mktEnd:now+(3*3600+12*60+44)*1000,
   lineup:{POR:[0],DEF:[2,3,4,6],MED:[7,8,9],DEL:[12,13,14]},
   squad:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],bids:{},
@@ -1361,7 +1371,7 @@ function fbErr(e){
 }
 function softRender(){var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&$('#view').contains(a))return;render()}
 function mergeRules(r){var d={anon:false,perDay:18,bonus:0.01,src:'helios',budget:40,cap:false,clause:false,debt:20,ideal:0,clubMax:0,offerDays:2,lockDays:14,clauseMult:1.5,clauseGiven:0,clauseTaken:0,clauseLock:true,clauseDouble:false,copa:null,inj:{},sus:{},start:'random'},o={};Object.keys(d).forEach(function(k){o[k]=(r&&r[k]!==undefined)?r[k]:d[k]});if(!(o.perDay>=18))o.perDay=18;return o}
-function payload(){return {uid:S.user.uid,name:S.user.name,fav:S.fav||'',cash:+S.cash.toFixed(2),v:REAL?2:1,rev:S.rev||0,coach:REAL?(S.coach!=null?toA(S.coach):null):null,cap:REAL?(S.cap!=null?toA(S.cap):null):null,selling:(function(){var o={};if(REAL)S.listings.forEach(function(l){if(l.seller==='Tú'&&P[l.id])o[P[l.id].a]=l.ask});return o})(),squad:S.squad.map(toA),lineup:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},role:(function(){var o={};Object.keys(S.role).forEach(function(k){var a=toA(+k);if(a!=null)o[a]=S.role[k]});return o})(),formation:S.formation,saved:S.saved,tot:S.myTot,j:(function(){var ks=Object.keys(S.rp||{}).map(Number).sort(function(a,b){return a-b});return REAL?(ks.length?S.rp[ks[ks.length-1]]:0):lineupPts()})(),rp:S.rp||{},r0:S.r0==null?null:S.r0,pm:S.pm||{},shAt:S.shAt||0,bp:S.bp||{},ip:S.ip||{},ph:S.ph||'',cup:(REAL&&S.user?myCup():null)||null,dr:!!S.dr,ln:S.ln||{},lo:S.lo||{},val:+teamValue().toFixed(2),pl:S.squad.length}}
+function payload(){return {uid:S.user.uid,name:S.user.name,fav:S.fav||'',cash:+S.cash.toFixed(2),v:REAL?2:1,rev:S.rev||0,coach:REAL?(S.coach!=null?toA(S.coach):null):null,cap:REAL?(S.cap!=null?toA(S.cap):null):null,selling:(function(){var o={};if(REAL)S.listings.forEach(function(l){if(l.seller==='Tú'&&P[l.id])o[P[l.id].a]=l.ask});return o})(),squad:S.squad.map(toA),lineup:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},role:(function(){var o={};Object.keys(S.role).forEach(function(k){var a=toA(+k);if(a!=null)o[a]=S.role[k]});return o})(),formation:S.formation,saved:S.saved,tot:S.myTot,j:(function(){var ks=Object.keys(S.rp||{}).map(Number).sort(function(a,b){return a-b});return REAL?(ks.length?S.rp[ks[ks.length-1]]:0):lineupPts()})(),rp:S.rp||{},r0:S.r0==null?null:S.r0,pm:S.pm||{},shAt:S.shAt||0,bp:S.bp||{},ip:S.ip||{},ph:S.ph||'',cup:(REAL&&S.user?myCup():null)||null,pf:(S.pf||[]).slice(),pfT:S.pfT||0,dr:!!S.dr,ln:S.ln||{},lo:S.lo||{},val:+teamValue().toFixed(2),pl:S.squad.length}}
 function saveNow(){
   clearTimeout(saveT);saveT=null;
   if(!CLOUD||!S.user||!S.lg.id||loadingLeague)return;
@@ -1384,7 +1394,7 @@ function applyMember(d){
     if(typeof d.cash==='number')S.cash=d.cash;
     if(d.formation)S.formation=d.formation;
     var cp=d.cap!=null?fromA(d.cap):null;S.cap=(cp!=null&&sq.indexOf(cp)>-1)?cp:null;
-    S.saved=!!d.saved;S.myTot=d.tot||0;S.rev=d.rev||0;S.rp=d.rp||{};S.r0=d.r0==null?null:d.r0;S.pm=d.pm||{};S.shAt=d.shAt||0;S.bp=d.bp||{};S.ip=d.ip||{};S.ln=d.ln||{};S.lo=d.lo||{};S.ph=d.ph||'';S.fav=d.fav||'';if(!S.ph&&S.user){try{S.ph=localStorage.getItem('helios.ph.'+S.user.uid)||''}catch(e){}}
+    S.saved=!!d.saved;S.myTot=d.tot||0;S.rev=d.rev||0;S.rp=d.rp||{};S.r0=d.r0==null?null:d.r0;S.pm=d.pm||{};S.shAt=d.shAt||0;S.bp=d.bp||{};S.ip=d.ip||{};S.ln=d.ln||{};S.lo=d.lo||{};S.ph=d.ph||'';S.fav=d.fav||'';pfLoad(d);if(!S.ph&&S.user){try{S.ph=localStorage.getItem('helios.ph.'+S.user.uid)||''}catch(e){}}
     S.listings=S.listings.filter(function(l){return l.seller!=='Tú'});
     Object.keys(d.selling||{}).forEach(function(a){var i=fromA(+a);if(i!=null&&sq.indexOf(i)>-1)S.listings.unshift({id:i,seller:'Tú',ask:+d.selling[a]})});
     return true;
@@ -1902,7 +1912,7 @@ function mcard(l){
   var who=comp?'LaLiga':mineL?'Tuyo, en venta':(S.rules.anon?'Otro mánager':esc(l.seller));
   var btn=mineL?'<button class="btn primary sm" data-a="unlist" data-id="'+id+'">Retirar</button>':'<button class="btn primary sm" data-a="bid" data-id="'+id+'">'+(b!=null?'Cambiar puja':'Fichar')+'</button>';
   var fcm=favCol(p.t);
-  return '<div class="mcard'+(comp?' cmp':' usr')+(fcm?' fav':'')+'"'+(fcm?' style="--f1:'+fcm[0]+';--f2:'+fcm[1]+'"':'')+'>'+(fcm?'<span class="fwrap" aria-hidden="true"><span class="fwm">'+crest(p.t,110)+'</span></span>':'')+'<button class="mimg" data-a="player" data-id="'+id+'" aria-label="Ver a '+esc(p.n)+'">'+avatar(id,'mk')+'<span class="cr">'+crest(p.t,22)+'</span></button><div class="info">'+
+  return '<div class="mcard'+(comp?' cmp':' usr')+(fcm?' fav':'')+'"'+(fcm?' style="--f1:'+fcm[0]+';--f2:'+fcm[1]+'"':'')+'>'+(fcm?'<span class="fwrap" aria-hidden="true"><span class="fwm">'+crest(p.t,110)+'</span></span>':'')+'<button class="mimg" data-a="player" data-id="'+id+'" aria-label="Ver a '+esc(p.n)+'">'+avatar(id,'mk')+'<span class="cr">'+crest(p.t,22)+'</span></button>'+favBtn(id,'mf')+'<div class="info">'+
   '<div class="l1">'+chip(p.p)+'<span class="pn">'+esc(p.n)+availBadge(id)+'</span><span class="pf"><small>PTS</small> <b>'+p.pts+'</b></span></div>'+
   '<div class="vl"><span class="vr"><span class="vlab">Valor</span><span class="mny"><i class="cn">€</i><b>'+eur(VAL[id])+'</b></span></span><span class="vr"><span class="vlab">Puja mínima</span><b class="mpr">'+eur(min)+'</b></span><small class="'+(c>=0?'up':'down')+'" style="text-align:right">'+pct(c)+' hoy</small></div>'+
   '<div class="l3"><span class="small muted">'+who+' · <span data-end="'+S.mktEnd+'"></span>'+(bidTxt(id)?' · <b class="bcnt">'+bidTxt(id)+'</b>':'')+(b!=null?' · <b class="up">'+fmt(b)+'</b>':'')+'</span>'+btn+'</div></div></div>';
@@ -1979,10 +1989,10 @@ function draftView(){
   return head+board+'<h3 style="margin:16px 0 8px">Últimos picks</h3><div class="panel">'+(last||'<p class="muted small" style="margin:0;padding:14px">Todavía no se ha elegido a nadie.</p>')+'</div>';
 }
 function viewMarket(){
-  var nOff=S.offers.length,tabs=REAL&&CLOUD?[['market','Mercado']].concat(draftTabOn()?[['draft','Draft']]:[],[['ops','Mis ops.'+(offerCount()?' ('+offerCount()+')':'')],['hist','Hist\u00F3rico'],['search','Buscar']]):[['market','Mercado'],['offers','Ofertas ('+nOff+')'],['mine','Mis pujas'],['hist','Historial']];
+  var nOff=S.offers.length,tabs=REAL&&CLOUD?[['market','Mercado']].concat(draftTabOn()?[['draft','Draft']]:[],[['ops','Mis ops.'+(offerCount()?' ('+offerCount()+')':'')],['hist','Hist\u00F3rico'],['fav','\u2605 Favoritos'],['search','Buscar']]):[['market','Mercado'],['offers','Ofertas ('+nOff+')'],['mine','Mis pujas'],['hist','Historial']];
   if(REAL&&CLOUD){if(S.mtab==='offers'){S.mtab='ops';S.otab='sell'}else if(S.mtab==='mine'){S.mtab='ops';S.otab='buy'}}
   if(REAL&&CLOUD&&!tabs.some(function(t){return t[0]===S.mtab}))S.mtab='market';
-  var seg='<div class="seg fit" role="group" aria-label="Mercado">'+
+  var seg='<div class="seg fit'+(tabs.length>=5?' n5':'')+'" role="group" aria-label="Mercado">'+
     tabs.map(function(m){return '<button data-a="mtab" data-m="'+m[0]+'" aria-pressed="'+(S.mtab===m[0])+'">'+m[1]+'</button>'}).join('')+'</div>';
   var body='';
   if(S.mtab==='market'){
@@ -1995,6 +2005,7 @@ function viewMarket(){
     body='<input class="inp" id="srchIn" placeholder="Buscar jugador o equipo" autocomplete="off" value="'+esc(S.q||'')+'" aria-label="Buscar jugador" style="margin-top:12px"><div id="srchRes">'+searchRows()+'</div>';
   }
   if(S.mtab==='ops'&&REAL&&CLOUD)body=opsView();
+  if(S.mtab==='fav'&&REAL&&CLOUD)body=favView();
   if(S.mtab==='draft'&&REAL&&CLOUD)body=draftView();
   if(S.mtab==='offers'&&!(REAL&&CLOUD)){
     body=S.offers.length?'<div class="list" style="margin-top:12px">'+S.offers.map(function(o,i){
@@ -3040,6 +3051,39 @@ function fanSection(id,j){
   return '<section id="fan"><div class="rstrip" id="fanStrip">'+R.map(function(r){return fanChip(p,id,r,r===j)}).join('')+'</div>'+
     '<div class="fanh"><h3>Jornada '+j+'</h3></div>'+fanMatch(p,j)+'<div id="rdet" data-j="'+j+'"><p class="muted small" style="padding:8px 0">Cargando…</p></div></section>';
 }
+
+/* ---- Jugadores favoritos ---- */
+function pfKey(){return 'helios.pf.'+(S.user?S.user.uid:'')}
+function pfLoad(d){
+  var l=null;try{l=JSON.parse(localStorage.getItem(pfKey())||'null')}catch(e){}
+  var dt=+(d&&d.pfT)||0,lt=l&&+l.t||0;
+  if(l&&Array.isArray(l.l)&&lt>=dt){S.pf=l.l.filter(function(x){return typeof x==='number'});S.pfT=lt}
+  else{S.pf=((d&&Array.isArray(d.pf))?d.pf:[]).filter(function(x){return typeof x==='number'});S.pfT=dt}
+}
+function pfSave(){try{localStorage.setItem(pfKey(),JSON.stringify({l:S.pf||[],t:S.pfT||0}))}catch(e){}}
+function isFav(id){return !!(REAL&&P[id]&&(S.pf||[]).indexOf(P[id].a)>-1)}
+var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17.4 6 20.7l1.3-6.6L2.4 9.5l6.7-.8z"/></svg>';
+function favBtn(id,cls){
+  if(!(REAL&&CLOUD&&P[id]))return '';
+  var on=isFav(id);
+  return '<button class="favb '+cls+(on?' on':'')+'" data-a="favT" data-id="'+id+'" aria-pressed="'+on+'" aria-label="'+(on?'Quitar de favoritos':'Añadir a favoritos')+'">'+STAR+'</button>';
+}
+function favPing(id,kind){
+  if(!(REAL&&CLOUD&&S.user&&S.lg.id&&P[id]))return;
+  var a=P[id].a,lid=S.lg.id;
+  setTimeout(function(){try{pushCall('favPing',{lid:lid,a:a,kind:kind}).catch(function(){})}catch(e){}},kind==='listed'?3000:1500);
+}
+function favView(){
+  var ids=(S.pf||[]).map(function(a){return pidOf(a)}).filter(function(i){return i!=null});
+  var hint=PUSH&&PUSH.on?'':'<div class="panel pad favhint"><b>Activa los avisos del móvil</b><p class="small muted" style="margin:4px 0 10px">Así te enteras en el momento de que fichen, vendan o pongan en el mercado a tus favoritos.</p><button class="btn sm" data-a="menuGo" data-tab="perfil">Activarlos en Mi perfil</button></div>';
+  if(!ids.length)return hint+'<div class="panel pad" style="margin-top:12px"><b>Todavía no tienes favoritos.</b><p class="small muted" style="margin:6px 0 0">Abre cualquier jugador (en el mercado, en el buscador o en la alineación de otro mánager) y pulsa la estrella ★. Te avisamos cuando alguien lo fiche o lo venda, o cuando salga al mercado.</p></div>';
+  var o=owners(),lst={};S.listings.forEach(function(l){lst[P[l.id].a]=l});
+  return hint+'<p class="small muted" style="margin:12px 2px 0">'+ids.length+' favorito'+(ids.length>1?'s':'')+'. Te avisamos de sus movimientos.</p><div class="list" style="margin-top:8px">'+ids.map(function(id){
+    var p=P[id],ow=o[p.a],l=lst[p.a];
+    var tag=l?(l.seller==='Tú'?'En venta (tuyo)':'En el mercado ahora'):ow?(ow==='Tú'?'Tuyo':'De '+esc(ow)):'Libre';
+    return '<div class="favrow">'+prow(id,valRight(id),' <span class="tag'+(l?' warn':'')+'">'+tag+'</span>')+favBtn(id,'rowf')+'</div>';
+  }).join('')+'</div>';
+}
 function sheetPlayer(id,ctx){
   var p=P[id],mine=S.squad.indexOf(id)>-1,l=S.listings.filter(function(x){return x.id===id})[0],c=dayChg(id);
   var J=p.real?realJornadas(p):jornadas(id),tot=J.reduce(function(a,m){return a+m.pts},0),avg=J.length?tot/J.length:0,best=J.length?J.reduce(function(a,m){return m.pts>a.pts?m:a},J[0]):{pts:0,j:0};
@@ -3072,7 +3116,7 @@ function sheetPlayer(id,ctx){
     return '<div class="jr'+(tap?' tap':'')+'" id="jr'+m.j+'"'+(tap?' data-a="jdet" data-id="'+id+'" data-j="'+m.j+'"':'')+'><span class="jn">J'+m.j+'</span><span class="jm">'+score+'</span><span class="jp '+cls+'">'+m.pts+'</span></div>'+(tap?'<div class="jd" id="jd'+m.j+'" hidden></div>':'');
   }).join('');
   var pfc=favCol(p.t)||['#4A5AA8','#1B2A6B'];
-  openSheet('<div class="pcard" style="--f1:'+pfc[0]+';--f2:'+pfc[1]+'"><span class="fwrap" aria-hidden="true"><span class="fwm big">'+crest(p.t,170)+'</span></span><div class="pc-l">'+avatar(id,'mk')+'</div><div class="pc-r">'+chip(p.p)+'<h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+esc(TEAMN[p.t]||p.t)+'</div>'+(availTxt(id)?'<div class="avline">'+availBadge(id)+' '+esc(availTxt(id))+'</div>':'')+'<div class="pc-st"><div><b>'+fmt(VAL[id])+'</b><small>Valor</small></div><div><b>'+(J.length?tot:'–')+'</b><small>Puntos</small></div><div><b>'+(J.length?num(avg,1):'–')+'</b><small>Media</small></div></div></div></div>'+
+  openSheet('<div class="pcard" style="--f1:'+pfc[0]+';--f2:'+pfc[1]+'">'+favBtn(id,'pcf')+'<span class="fwrap" aria-hidden="true"><span class="fwm big">'+crest(p.t,170)+'</span></span><div class="pc-l">'+avatar(id,'mk')+'</div><div class="pc-r">'+chip(p.p)+'<h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+esc(TEAMN[p.t]||p.t)+'</div>'+(availTxt(id)?'<div class="avline">'+availBadge(id)+' '+esc(availTxt(id))+'</div>':'')+'<div class="pc-st"><div><b>'+fmt(VAL[id])+'</b><small>Valor</small></div><div><b>'+(J.length?tot:'–')+'</b><small>Puntos</small></div><div><b>'+(J.length?num(avg,1):'–')+'</b><small>Media</small></div></div></div></div>'+
   '<div class="stats"><div class="kv"><span>Hoy</span><b class="'+(c>=0?'up':'down')+'">'+pct(c)+'</b></div><div class="kv"><span>Mejor jornada</span><b>'+(J.length?best.pts+' (J'+best.j+')':'–')+'</b></div><div class="kv"><span>Jornadas</span><b>'+J.length+'</b></div></div>'+
   (p.real&&Math.max.apply(null,HIST[id])===Math.min.apply(null,HIST[id])?'':'<section><h3>Valor de mercado, 15 días</h3>'+spark(HIST[id])+'</section>')+
   (fan?fanSection(id,fanSel):J.length?('<section><h3>Puntos por jornada</h3><div class="bars j8">'+J.map(function(m){return '<div><span>'+m.pts+'</span><i style="height:'+Math.max(3,Math.round(m.pts/mx*54))+'px"></i><span class="muted" style="font-weight:400">J'+m.j+'</span></div>'}).join('')+'</div></section>'+
@@ -3532,11 +3576,11 @@ var A={
   },
   dealReject:function(d){db.collection('leagues').doc(S.lg.id).collection('deals').doc(d.d).update({status:'rejected'}).then(function(){toast('Oferta rechazada')}).catch(function(e){toast('No se pudo rechazar: '+fbErr(e))})},
   dealCancel:function(d){db.collection('leagues').doc(S.lg.id).collection('deals').doc(d.d).update({status:'cancelled'}).then(function(){toast('Cancelado')}).catch(function(e){toast('No se pudo cancelar: '+fbErr(e))})},
-  sellNow:function(d){var id=+d.id,v=VAL[id];if(REAL&&S.squad.length<=11){toast('Necesitas al menos 11 jugadores: no puedes vender más.');return}if(!askOk('¿Vender a '+P[id].n+' a la liga por '+fmt(v)+'?\nNo se puede deshacer.'))return;removeFromSquad(id);S.cash=+(S.cash+v).toFixed(2);log('Vendes a '+P[id].n+' a la liga por '+fmt(v)+'.');news('fichaje','Vendes a '+P[id].n+' a la liga por '+fmt(v)+'.');cloudNews('Vendes a '+P[id].n+' a la liga por '+fmt(v)+'.',P[id].a,S.user?S.user.name+' vende a '+P[id].n+' a la liga por '+fmt(v)+'.':null,{f:S.user.uid,t:null,p:v,k:'liga'});closeSheet();toast('Vendido por '+fmt(v));render()},
+  sellNow:function(d){var id=+d.id,v=VAL[id];if(REAL&&S.squad.length<=11){toast('Necesitas al menos 11 jugadores: no puedes vender más.');return}if(!askOk('¿Vender a '+P[id].n+' a la liga por '+fmt(v)+'?\nNo se puede deshacer.'))return;removeFromSquad(id);S.cash=+(S.cash+v).toFixed(2);log('Vendes a '+P[id].n+' a la liga por '+fmt(v)+'.');news('fichaje','Vendes a '+P[id].n+' a la liga por '+fmt(v)+'.');cloudNews('Vendes a '+P[id].n+' a la liga por '+fmt(v)+'.',P[id].a,S.user?S.user.name+' vende a '+P[id].n+' a la liga por '+fmt(v)+'.':null,{f:S.user.uid,t:null,p:v,k:'liga'});favPing(id,'sold');closeSheet();toast('Vendido por '+fmt(v));render()},
   listIt:function(d){
     var id=+d.id,v=parseE($('#askIn').value),e=$('#askErr');
     if(isNaN(v)||v<0.16){e.textContent='El precio mínimo es '+fmt(0.16)+'.';e.hidden=false;return}
-    S.listings.unshift({id:id,seller:'Tú',ask:+v.toFixed(2)});closeSheet();S.tab='market';S.mtab='market';toast(P[id].n+' está en el mercado desde '+fmt(v));render();
+    S.listings.unshift({id:id,seller:'Tú',ask:+v.toFixed(2)});favPing(id,'listed');closeSheet();S.tab='market';S.mtab='market';toast(P[id].n+' está en el mercado desde '+fmt(v));render();
   },
   accept:function(d){var o=S.offers[+d.i];if(!o)return;var id=o.id,amt=o.amount,who=S.rules.anon?'un mánager anónimo':o.from;removeFromSquad(id);S.cash=+(S.cash+amt).toFixed(2);log('Vendes a '+P[id].n+' a '+who+' por '+fmt(amt)+'.');news('fichaje','Vendes a '+P[id].n+' por '+fmt(amt)+'.');toast('Oferta aceptada: '+fmt(amt));render()},
   reject:function(d){S.offers.splice(+d.i,1);toast('Oferta rechazada');render()},
@@ -3769,6 +3813,16 @@ function applyTheme(){
   if(tb&&tb.setAttribute)tb.setAttribute('title',THEME==='dark'?'Pasar a modo claro':'Pasar a modo oscuro');
   var mt=$('meta[name="theme-color"]');if(mt&&mt.setAttribute)mt.setAttribute('content',SKIN!=='helios'?SK.head:(THEME==='dark'?'#0C1630':'#0F1E3D'));
 }
+A.favT=function(d){
+  if(!REAL||!S.user)return;
+  var id=+d.id,p=P[id];if(!p)return;
+  S.pf=S.pf||[];var i=S.pf.indexOf(p.a),on=i<0;
+  if(on)S.pf.push(p.a);else S.pf.splice(i,1);
+  S.pfT=Date.now();pfSave();queueSave();
+  document.querySelectorAll('.favb[data-id="'+id+'"]').forEach(function(x){x.classList.toggle('on',on);x.setAttribute('aria-pressed',on?'true':'false')});
+  toast(on?'★ '+short(p.n)+' en favoritos'+(PUSH&&PUSH.on?'':'. Activa los avisos en Mi perfil para recibirlos en el móvil'):'Quitado de favoritos');
+  if(S.tab==='market'&&S.mtab==='fav')render();
+};
 A.pushToggle=function(){
   if(PUSH.busy||!pushSupported())return;
   PUSH.busy=true;render();
