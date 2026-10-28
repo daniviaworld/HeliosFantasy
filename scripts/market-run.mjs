@@ -91,7 +91,7 @@ export async function runMarket({ db, now = Date.now(), log = console.log, notif
               for (const [k, rf, d] of ops) { if (k === 'set') tx.set(rf, d); else if (k === 'update') tx.update(rf, d); else tx.delete(rf); }
               return true;
             });
-            if (won) { closed++; log('Mercado cerrado en', data.name, '·', r.sold.length, 'fichajes'); if (notify) { try { await notify(r.news, data.name); } catch (e) { console.warn('aviso:', e.message); } } }
+            if (won) { closed++; log('Mercado cerrado en', data.name, '·', r.sold.length, 'fichajes'); if (notify) { try { await notify(r.news, data.name, { members, base, listings: (r.state && r.state.listings) || [] }); } catch (e) { console.warn('aviso:', e.message); } } }
             else log('El mercado de', data.name, 'ya lo había cerrado otra ejecución.');
           }
         }
