@@ -1058,6 +1058,25 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
 @keyframes hwFly{0%{transform:translate(0,0);opacity:0}6%{opacity:.9}30%{transform:translate(40vw,18px)}60%{transform:translate(75vw,-10px)}92%{opacity:.9}100%{transform:translate(115vw,14px);opacity:0}}
 body.hw .brand .name,body.hw .brand b{text-shadow:0 0 10px rgba(255,140,0,.55)}
 @media (prefers-reduced-motion:reduce){.hw-sp,.hw-pk,.hw-bat{animation:none}.hw-bat{display:none}}
+
+.hw-vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 42%,rgba(40,0,10,.55) 100%);animation:hwPulse 5s ease-in-out infinite}
+.hw-fog{position:absolute;left:-20%;right:-20%;bottom:0;height:34%;background:radial-gradient(ellipse at 30% 100%,rgba(190,170,220,.28),transparent 60%),radial-gradient(ellipse at 75% 100%,rgba(150,200,170,.22),transparent 58%);animation:hwFog 14s ease-in-out infinite alternate}
+.hw-fl{position:absolute;inset:0;background:#cfd8ff;opacity:0;animation:hwFlash 23s linear infinite}
+.hw-dr{position:absolute;left:0;right:0;top:57px;height:50px}
+.hw-dr i{position:absolute;top:0;width:6px;border-radius:0 0 7px 7px;background:linear-gradient(180deg,#8a0b14,#c3121f);box-shadow:0 0 6px rgba(200,0,20,.6);transform-origin:top;animation:hwDrip 7s ease-in-out infinite}
+.hw-sp.s2{left:12%;animation-duration:5.6s;animation-delay:-2s}.hw-sp.s2 i{height:70px}
+.hw-gh{position:absolute;font-size:28px;opacity:0;filter:drop-shadow(0 0 10px rgba(200,230,255,.8));animation:hwGhost 17s ease-in-out infinite}
+.hw-gh.g1{top:38%;left:-8%}.hw-gh.g2{top:62%;left:-8%;font-size:22px;animation-delay:8s;animation-duration:21s}
+.hw-sk{position:absolute;right:12px;bottom:calc(72px + env(safe-area-inset-bottom));font-size:24px;filter:drop-shadow(0 0 8px rgba(120,255,140,.7));animation:hwGl 3.4s ease-in-out infinite}
+.hw-ey{position:absolute;right:16%;top:50%;font-size:15px;opacity:0;animation:hwEyes 13s steps(1) infinite}
+body.hw .top{box-shadow:0 2px 18px rgba(200,20,30,.35)}
+@keyframes hwPulse{0%,100%{opacity:.75}50%{opacity:1}}
+@keyframes hwFog{0%{transform:translateX(-6%)}100%{transform:translateX(6%)}}
+@keyframes hwFlash{0%,93%,100%{opacity:0}94%{opacity:.35}94.6%{opacity:0}95.3%{opacity:.5}96.2%{opacity:0}}
+@keyframes hwDrip{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
+@keyframes hwGhost{0%{transform:translate(0,0);opacity:0}10%{opacity:.55}50%{transform:translate(55vw,-24px)}85%{opacity:.5}100%{transform:translate(115vw,10px);opacity:0}}
+@keyframes hwEyes{0%,70%{opacity:0}74%,80%{opacity:.9}81%{opacity:0}84%{opacity:.9}88%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.hw-vig,.hw-fog,.hw-fl,.hw-dr i,.hw-gh,.hw-sk,.hw-ey{animation:none}.hw-fl,.hw-gh,.hw-ey{display:none}}
 /*THEME-END*/
 </style>
 
@@ -3024,7 +3043,7 @@ function hwCheck(){
   if(!on){if(el)el.remove();return}
   if(el)return;
   el=document.createElement('div');el.id='hw';el.setAttribute('aria-hidden','true');
-  el.innerHTML='<svg class="hw-web l" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><svg class="hw-web r" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><div class="hw-sp"><i></i><b>🕷️</b></div><div class="hw-pk">🎃</div><span class="hw-bat b1">🦇</span><span class="hw-bat b2">🦇</span><span class="hw-bat b3">🦇</span>';
+  el.innerHTML='<svg class="hw-web l" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><svg class="hw-web r" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><div class="hw-vig"></div><div class="hw-fog"></div><div class="hw-fl"></div><div class="hw-dr"><i style="left:8%;height:34px"></i><i style="left:19%;height:18px;animation-delay:2s"></i><i style="left:36%;height:42px;animation-delay:4s"></i><i style="left:54%;height:22px;animation-delay:1s"></i><i style="left:71%;height:38px;animation-delay:3s"></i><i style="left:90%;height:26px;animation-delay:5s"></i></div><div class="hw-sp"><i></i><b>🕷️</b></div><div class="hw-sp s2"><i></i><b>🕷️</b></div><div class="hw-pk">🎃</div><div class="hw-gh g1">👻</div><div class="hw-gh g2">👻</div><div class="hw-sk">💀</div><div class="hw-ey">👀</div><span class="hw-bat b1">🦇</span><span class="hw-bat b2">🦇</span><span class="hw-bat b3">🦇</span>';
   document.body.appendChild(el);
 }
 setInterval(function(){try{hwCheck()}catch(e){}},600000);
