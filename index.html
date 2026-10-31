@@ -1062,8 +1062,6 @@ body.hw .brand .name,body.hw .brand b{text-shadow:0 0 10px rgba(255,140,0,.55)}
 .hw-vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 42%,rgba(40,0,10,.55) 100%);animation:hwPulse 5s ease-in-out infinite}
 .hw-fog{position:absolute;left:-20%;right:-20%;bottom:0;height:34%;background:radial-gradient(ellipse at 30% 100%,rgba(190,170,220,.28),transparent 60%),radial-gradient(ellipse at 75% 100%,rgba(150,200,170,.22),transparent 58%);animation:hwFog 14s ease-in-out infinite alternate}
 .hw-fl{position:absolute;inset:0;background:#cfd8ff;opacity:0;animation:hwFlash 23s linear infinite}
-.hw-dr{position:absolute;left:0;right:0;top:57px;height:50px}
-.hw-dr i{position:absolute;top:0;width:6px;border-radius:0 0 7px 7px;background:linear-gradient(180deg,#8a0b14,#c3121f);box-shadow:0 0 6px rgba(200,0,20,.6);transform-origin:top;animation:hwDrip 7s ease-in-out infinite}
 .hw-sp.s2{left:12%;animation-duration:5.6s;animation-delay:-2s}.hw-sp.s2 i{height:70px}
 .hw-gh{position:absolute;font-size:28px;opacity:0;filter:drop-shadow(0 0 10px rgba(200,230,255,.8));animation:hwGhost 17s ease-in-out infinite}
 .hw-gh.g1{top:38%;left:-8%}.hw-gh.g2{top:62%;left:-8%;font-size:22px;animation-delay:8s;animation-duration:21s}
@@ -1073,10 +1071,19 @@ body.hw .top{box-shadow:0 2px 18px rgba(200,20,30,.35)}
 @keyframes hwPulse{0%,100%{opacity:.75}50%{opacity:1}}
 @keyframes hwFog{0%{transform:translateX(-6%)}100%{transform:translateX(6%)}}
 @keyframes hwFlash{0%,93%,100%{opacity:0}94%{opacity:.35}94.6%{opacity:0}95.3%{opacity:.5}96.2%{opacity:0}}
-@keyframes hwDrip{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
 @keyframes hwGhost{0%{transform:translate(0,0);opacity:0}10%{opacity:.55}50%{transform:translate(55vw,-24px)}85%{opacity:.5}100%{transform:translate(115vw,10px);opacity:0}}
 @keyframes hwEyes{0%,70%{opacity:0}74%,80%{opacity:.9}81%{opacity:0}84%{opacity:.9}88%,100%{opacity:0}}
-@media (prefers-reduced-motion:reduce){.hw-vig,.hw-fog,.hw-fl,.hw-dr i,.hw-gh,.hw-sk,.hw-ey{animation:none}.hw-fl,.hw-gh,.hw-ey{display:none}}
+@media (prefers-reduced-motion:reduce){.hw-vig,.hw-fog,.hw-fl,.hw-d,.hw-d b,.hw-drop,.hw-gh,.hw-sk,.hw-ey{animation:none}.hw-fl,.hw-gh,.hw-ey{display:none}}
+
+.hw-dr{position:absolute;left:0;right:0;top:56px;height:80px}
+.hw-band{position:absolute;left:0;top:0;width:100%;height:12px;filter:drop-shadow(0 2px 3px rgba(60,0,6,.7))}
+.hw-d{position:absolute;top:8px;display:flex;flex-direction:column;align-items:center;width:10px;margin-left:-5px}
+.hw-d b{display:block;width:5px;height:6px;background:linear-gradient(90deg,#6d0710,#c01422 45%,#8a0b16);border-radius:0 0 2px 2px;animation:hwGrow 9s ease-in-out infinite;animation-delay:inherit}
+.hw-d u{display:block;width:9px;height:10px;margin-top:-3px;border-radius:50% 50% 50% 50%/40% 40% 62% 62%;background:radial-gradient(circle at 36% 30%,#ff7a80 0,#d01a28 26%,#8a0b16 70%);box-shadow:0 1px 3px rgba(60,0,6,.8);animation:hwBulb 9s ease-in-out infinite;animation-delay:inherit;position:relative}
+.hw-drop{position:absolute;top:60px;width:6px;height:8px;margin-left:-3px;border-radius:50% 50% 50% 50%/35% 35% 65% 65%;background:radial-gradient(circle at 35% 30%,#ff7a80,#a50f1c 60%,#6d0710);opacity:0;animation:hwFall 7s ease-in infinite}
+@keyframes hwGrow{0%,100%{height:5px}55%{height:var(--L)}}
+@keyframes hwBulb{0%,100%{transform:translateY(0)}55%{transform:translateY(0)}}
+@keyframes hwFall{0%,60%{opacity:0;transform:translateY(0)}64%{opacity:.95}100%{opacity:0;transform:translateY(150px)}}
 /*THEME-END*/
 </style>
 
@@ -3043,7 +3050,7 @@ function hwCheck(){
   if(!on){if(el)el.remove();return}
   if(el)return;
   el=document.createElement('div');el.id='hw';el.setAttribute('aria-hidden','true');
-  el.innerHTML='<svg class="hw-web l" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><svg class="hw-web r" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><div class="hw-vig"></div><div class="hw-fog"></div><div class="hw-fl"></div><div class="hw-dr"><i style="left:8%;height:34px"></i><i style="left:19%;height:18px;animation-delay:2s"></i><i style="left:36%;height:42px;animation-delay:4s"></i><i style="left:54%;height:22px;animation-delay:1s"></i><i style="left:71%;height:38px;animation-delay:3s"></i><i style="left:90%;height:26px;animation-delay:5s"></i></div><div class="hw-sp"><i></i><b>🕷️</b></div><div class="hw-sp s2"><i></i><b>🕷️</b></div><div class="hw-pk">🎃</div><div class="hw-gh g1">👻</div><div class="hw-gh g2">👻</div><div class="hw-sk">💀</div><div class="hw-ey">👀</div><span class="hw-bat b1">🦇</span><span class="hw-bat b2">🦇</span><span class="hw-bat b3">🦇</span>';
+  el.innerHTML='<svg class="hw-web l" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><svg class="hw-web r" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#e9e4f5" stroke-width="1" stroke-linecap="round"><path d="M0 0L120 0M0 0L108 40M0 0L84 84M0 0L40 108M0 0L0 120"/><path d="M26 0Q22 22 0 26M52 0Q44 44 0 52M80 0Q66 66 0 80M108 0Q88 88 0 108"/></g></svg><div class="hw-vig"></div><div class="hw-fog"></div><div class="hw-fl"></div><div class="hw-dr"><svg class="hw-band" viewBox="0 0 400 14" preserveAspectRatio="none"><defs><linearGradient id="hwg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a0008"/><stop offset=".6" stop-color="#a30c18"/><stop offset="1" stop-color="#7d0610"/></linearGradient></defs><path fill="url(#hwg)" d="M0 0H400V5C390 6 384 9 372 8C360 7 352 4 338 6C322 9 314 11 298 8C284 5 270 4 256 7C244 10 232 9 218 6C204 3 190 5 176 8C162 11 150 10 136 7C124 4 110 5 98 8C86 11 72 10 58 7C44 4 30 6 18 8C10 9 4 7 0 6Z"/></svg><span class="hw-d" style="left:6%;--L:26px;animation-delay:0s"><b></b><u></u></span><span class="hw-d" style="left:15%;--L:12px;animation-delay:2.2s"><b></b><u></u></span><span class="hw-d" style="left:27%;--L:40px;animation-delay:1s"><b></b><u></u></span><span class="hw-d" style="left:38%;--L:18px;animation-delay:3.4s"><b></b><u></u></span><span class="hw-d" style="left:49%;--L:32px;animation-delay:0.6s"><b></b><u></u></span><span class="hw-d" style="left:61%;--L:14px;animation-delay:4.1s"><b></b><u></u></span><span class="hw-d" style="left:72%;--L:44px;animation-delay:1.8s"><b></b><u></u></span><span class="hw-d" style="left:84%;--L:22px;animation-delay:2.9s"><b></b><u></u></span><span class="hw-d" style="left:93%;--L:30px;animation-delay:0.3s"><b></b><u></u></span><span class="hw-drop" style="left:27%"></span><span class="hw-drop" style="left:72%;animation-delay:3.5s"></span></div><div class="hw-sp"><i></i><b>🕷️</b></div><div class="hw-sp s2"><i></i><b>🕷️</b></div><div class="hw-pk">🎃</div><div class="hw-gh g1">👻</div><div class="hw-gh g2">👻</div><div class="hw-sk">💀</div><div class="hw-ey">👀</div><span class="hw-bat b1">🦇</span><span class="hw-bat b2">🦇</span><span class="hw-bat b3">🦇</span>';
   document.body.appendChild(el);
 }
 setInterval(function(){try{hwCheck()}catch(e){}},600000);
