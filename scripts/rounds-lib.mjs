@@ -39,14 +39,14 @@ export function planRound({ now, matches, members, done }) {
 // línea que sí jugó. Sin banquillo en la foto (jornadas antiguas) no hay sustituciones.
 // L: {lu, bn, rl}   ctx: { played(a), done(a), line(a, rl) }   →  [{out, in, pos}]
 export function subsFor(L, ctx) {
-  const res = [], used = new Set();
+  const res = [];
   if (!L || !Array.isArray(L.bn) || !L.bn.length) return res;
+  // solo cuenta el PRIMER suplente de cada línea, y solo si algún titular de esa línea no jugó
   for (const pos of ['POR', 'DEF', 'MED', 'DEL']) {
-    for (const a of (L.lu && L.lu[pos]) || []) {
-      if (a == null || !ctx.done(a) || ctx.played(a)) continue;
-      const b = L.bn.find((x) => !used.has(String(x)) && ctx.line(x, L.rl) === pos && ctx.played(x));
-      if (b != null) { used.add(String(b)); res.push({ out: a, in: b, pos }); }
-    }
+    const head = L.bn.find((x) => ctx.line(x, L.rl) === pos);
+    if (head == null || !ctx.played(head)) continue;
+    const out = ((L.lu && L.lu[pos]) || []).find((a) => a != null && ctx.done(a) && !ctx.played(a));
+    if (out != null) res.push({ out, in: head, pos });
   }
   return res;
 }
