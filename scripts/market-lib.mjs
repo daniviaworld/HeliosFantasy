@@ -169,6 +169,14 @@ export function planClose({ now, state, members, bids, base, perDay = 8, anon = 
   }
   let end = (state.end || now) + DAY;
   if (end <= now + 3600 * 1000) end = now + DAY;
-  const next = { end, round: (state.round || 0) + 1, values, ...(pointMoves ? { vr: pointMoves.upTo } : state.vr != null ? { vr: state.vr } : {}), listings: newCpuListings(base, M, perDay, rng), cpu: nextCpu };
+  // historial de valores (últimos 15 cierres): sirve para el % de «Hoy» y la gráfica de cada jugador
+  const oldVh = state.vh || {}, vh = {};
+  for (const a of new Set([...Object.keys(oldVh), ...Object.keys(values)])) {
+    const before = (state.values || {})[a] != null ? state.values[a] : (base[a] ? base[a].v : 1), now2 = val(a);
+    const h = Array.isArray(oldVh[a]) && oldVh[a].length ? oldVh[a].slice() : (Math.abs(now2 - before) > 1e-9 ? [before] : null);
+    if (!h) continue;
+    h.push(now2); vh[a] = h.slice(-15);
+  }
+  const next = { end, round: (state.round || 0) + 1, values, vh, ...(pointMoves ? { vr: pointMoves.upTo } : state.vr != null ? { vr: state.vr } : {}), listings: newCpuListings(base, M, perDay, rng), cpu: nextCpu };
   return { state: next, memberUpdates, news, sold, cpuNew };
 }

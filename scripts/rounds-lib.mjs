@@ -19,9 +19,33 @@ export function planRound({ now, matches, members, done }) {
     const n = lineupCount(m), neg = (+m.cash || 0) < -1e-9;
     const lu = {};
     for (const p of ['POR', 'DEF', 'MED', 'DEL']) lu[p] = ((m.lineup && m.lineup[p]) || []).map((x) => (x == null ? null : x));
-    elig[uid] = { ok: !neg && n >= MIN_LINEUP, n, neg, lu, cp: m.cap == null ? null : m.cap, co: m.coach == null ? null : m.coach };
+    // banquillo al empezar la jornada (para las sustituciones automáticas): jugadores de campo que no están en el once
+    const inL = new Set(); for (const p of ['POR', 'DEF', 'MED', 'DEL']) for (const x of lu[p]) if (x != null) inL.add(String(x));
+    const bn = [], rl = {};
+    for (const a of m.squad || []) {
+      if (a == null || +a < 0 || inL.has(String(a)) || (m.coach != null && String(m.coach) === String(a))) continue;
+      bn.push(a); if (m.role && m.role[a]) rl[a] = m.role[a];
+    }
+    elig[uid] = { ok: !neg && n >= MIN_LINEUP, n, neg, lu, cp: m.cap == null ? null : m.cap, co: m.coach == null ? null : m.coach, bn, rl };
   }
   return { round, start, elig };
+}
+
+
+// Sustituciones automáticas: si un titular no juega (su partido ya acabó y no puntúa), entra el primer suplente de su misma
+// línea que sí jugó. Sin banquillo en la foto (jornadas antiguas) no hay sustituciones.
+// L: {lu, bn, rl}   ctx: { played(a), done(a), line(a, rl) }   →  [{out, in, pos}]
+export function subsFor(L, ctx) {
+  const res = [], used = new Set();
+  if (!L || !Array.isArray(L.bn) || !L.bn.length) return res;
+  for (const pos of ['POR', 'DEF', 'MED', 'DEL']) {
+    for (const a of (L.lu && L.lu[pos]) || []) {
+      if (a == null || !ctx.done(a) || ctx.played(a)) continue;
+      const b = L.bn.find((x) => !used.has(String(x)) && ctx.line(x, L.rl) === pos && ctx.played(x));
+      if (b != null) { used.add(String(b)); res.push({ out: a, in: b, pos }); }
+    }
+  }
+  return res;
 }
 
 // ---- Cierre de jornadas en el servidor: así la clasificación no depende de que cada mánager abra la app.
@@ -49,6 +73,8 @@ export function planSettle({ matches, now = Date.now(), members, snaps = {}, sea
         const L = e && e.lu ? { lu: e.lu, cp: e.cp, co: e.co } : { lu: m.lineup || {}, cp: m.cap == null ? null : m.cap, co: m.coach == null ? null : m.coach };
         for (const p of ['POR', 'DEF', 'MED', 'DEL']) for (const a of L.lu[p] || []) if (a != null) pts += pj(a, r) * (capOn && L.cp != null && String(a) === String(L.cp) ? 2 : 1);
         if (L.co != null) pts += cj(L.co, r);
+        const has = (a) => { const j = season.pl && season.pl[a] && season.pl[a].j; return !!j && j[r] != null; };
+        for (const s of subsFor({ lu: L.lu, bn: e && e.bn, rl: e && e.rl }, { played: has, done: () => true, line: (b, rl) => (rl && rl[b]) || (base[b] && base[b].p) })) pts += pj(s.in, r);
       }
       rp[r] = pts; add = true;
     }
