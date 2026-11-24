@@ -1319,7 +1319,7 @@ function liveEligible(uid){if(CUR&&lateIn(CUR,uid))return false;var e=S.rsnap&&C
 // el once de cada mánager al empezar la jornada (foto del servidor); si no existe, se usa el actual
 function snapOf(r,uid){var e=S.rsnap&&S.rsnap[r]&&S.rsnap[r][uid];return e&&e.lu?e:null}
 function ptsLineup(r,uid,cur){var e=snapOf(r,uid);return e?{lu:e.lu,co:e.co,cp:e.cp,bn:e.bn,rl:e.rl,snap:true}:cur}
-function benchSnap(){var inL={},bn=[],rl={};POS.forEach(function(q){S.lineup[q].forEach(function(x){if(x!=null)inL[x]=1})});S.squad.forEach(function(id){if(inL[id]||!P[id]||P[id].p==='ENT'||id===S.coach)return;var a=toA(id);bn.push(a);if(S.role[id])rl[a]=S.role[id]});return {bn:bn,rl:rl}}
+function benchSnap(){var inL={},bn=[],rl={};POS.forEach(function(q){S.lineup[q].forEach(function(x){if(x!=null)inL[x]=1})});benchAll().forEach(function(id){var a=toA(id);bn.push(a);if(S.role[id])rl[a]=S.role[id]});return {bn:bn,rl:rl}}
 function myCur(){var b=benchSnap();return {lu:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},co:S.coach!=null?toA(S.coach):null,cp:S.cap!=null?toA(S.cap):null,bn:b.bn,rl:b.rl}}
 // Sustituciones automáticas: si un titular no juega (su partido ya acabó y no tiene puntos), entra el primer suplente
 // de su misma línea que sí jugó. Misma regla que el servidor (rounds-lib.mjs subsFor).
@@ -1464,7 +1464,7 @@ function applyCatalog(cat){
   HIST=P.map(function(p){var a=[];for(var k=0;k<15;k++)a.push(p.v);return a});
   IDX={};P.forEach(function(p){IDX[p.a]=p.id});
   TEAMN=tn;TLOGO=tl;RIVAL_OWNED=[];JC=[];REAL=true;
-  S.squad=[];S.coach=null;S.cap=null;S.lineup={POR:[],DEF:[],MED:[],DEL:[]};S.role={};S.listings=[];S.bids={};S.offers=[];
+  S.squad=[];S.coach=null;S.cap=null;S.lineup={POR:[],DEF:[],MED:[],DEL:[]};S.role={};S.bo=[];S.listings=[];S.bids={};S.offers=[];
 }
 var SEED_EX=[],mktInit=false;
 function sn(t){return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
@@ -1585,7 +1585,7 @@ function fbErr(e){
 }
 function softRender(){var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&$('#view').contains(a))return;render()}
 function mergeRules(r){var d={anon:false,perDay:18,bonus:0.01,src:'helios',budget:40,cap:false,clause:false,debt:20,ideal:0,clubMax:0,offerDays:2,lockDays:14,clauseMult:1.5,clauseGiven:0,clauseTaken:0,clauseLock:true,clauseDouble:false,copa:null,cl:null,inj:{},sus:{},start:'random'},o={};Object.keys(d).forEach(function(k){o[k]=(r&&r[k]!==undefined)?r[k]:d[k]});if(!(o.perDay>=18))o.perDay=18;return o}
-function payload(){return {uid:S.user.uid,name:S.user.name,fav:S.fav||'',cash:+S.cash.toFixed(2),v:REAL?2:1,rev:S.rev||0,coach:REAL?(S.coach!=null?toA(S.coach):null):null,cap:REAL?(S.cap!=null?toA(S.cap):null):null,selling:(function(){var o={};if(REAL)S.listings.forEach(function(l){if(l.seller==='Tú'&&P[l.id])o[P[l.id].a]=l.ask});return o})(),squad:S.squad.map(toA),lineup:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},role:(function(){var o={};Object.keys(S.role).forEach(function(k){var a=toA(+k);if(a!=null)o[a]=S.role[k]});return o})(),formation:S.formation,saved:S.saved,tot:S.myTot,j:(function(){var ks=Object.keys(S.rp||{}).map(Number).sort(function(a,b){return a-b});return REAL?(ks.length?S.rp[ks[ks.length-1]]:0):lineupPts()})(),rp:S.rp||{},r0:S.r0==null?null:S.r0,pm:S.pm||{},shAt:S.shAt||0,bp:S.bp||{},ip:S.ip||{},ph:S.ph||'',cup:(REAL&&S.user?myCup():null)||null,cl:(REAL&&S.user?myCl():null)||null,pf:(S.pf||[]).slice(),pfT:S.pfT||0,dr:!!S.dr,ln:S.ln||{},lo:S.lo||{},val:+teamValue().toFixed(2),pl:S.squad.length}}
+function payload(){return {uid:S.user.uid,name:S.user.name,fav:S.fav||'',cash:+S.cash.toFixed(2),v:REAL?2:1,rev:S.rev||0,coach:REAL?(S.coach!=null?toA(S.coach):null):null,cap:REAL?(S.cap!=null?toA(S.cap):null):null,selling:(function(){var o={};if(REAL)S.listings.forEach(function(l){if(l.seller==='Tú'&&P[l.id])o[P[l.id].a]=l.ask});return o})(),squad:S.squad.map(toA),lineup:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},role:(function(){var o={};Object.keys(S.role).forEach(function(k){var a=toA(+k);if(a!=null)o[a]=S.role[k]});return o})(),formation:S.formation,bo:(REAL?benchAll().map(toA):[]),saved:S.saved,tot:S.myTot,j:(function(){var ks=Object.keys(S.rp||{}).map(Number).sort(function(a,b){return a-b});return REAL?(ks.length?S.rp[ks[ks.length-1]]:0):lineupPts()})(),rp:S.rp||{},r0:S.r0==null?null:S.r0,pm:S.pm||{},shAt:S.shAt||0,bp:S.bp||{},ip:S.ip||{},ph:S.ph||'',cup:(REAL&&S.user?myCup():null)||null,cl:(REAL&&S.user?myCl():null)||null,pf:(S.pf||[]).slice(),pfT:S.pfT||0,dr:!!S.dr,ln:S.ln||{},lo:S.lo||{},val:+teamValue().toFixed(2),pl:S.squad.length}}
 function saveNow(){
   clearTimeout(saveT);saveT=null;
   if(!CLOUD||!S.user||!S.lg.id||loadingLeague)return;
@@ -1607,6 +1607,7 @@ function applyMember(d){
     var ro={};Object.keys(d.role||{}).forEach(function(k){var i=fromA(+k);if(i!=null)ro[i]=d.role[k]});S.role=ro;
     if(typeof d.cash==='number')S.cash=d.cash;
     if(d.formation)S.formation=d.formation;
+    S.bo=(d.bo||[]).map(fromA).filter(function(x){return x!=null&&sq.indexOf(x)>-1});
     var cp=d.cap!=null?fromA(d.cap):null;S.cap=(cp!=null&&sq.indexOf(cp)>-1)?cp:null;
     S.saved=!!d.saved;S.myTot=d.tot||0;S.rev=d.rev||0;S.rp=d.rp||{};S.r0=d.r0==null?null:d.r0;S.pm=d.pm||{};S.shAt=d.shAt||0;S.bp=d.bp||{};S.ip=d.ip||{};S.ln=d.ln||{};S.lo=d.lo||{};S.ph=d.ph||'';S.fav=d.fav||'';pfLoad(d);if(!S.ph&&S.user){try{S.ph=localStorage.getItem('helios.ph.'+S.user.uid)||''}catch(e){}}
     S.listings=S.listings.filter(function(l){return l.seller!=='Tú'});
@@ -2281,15 +2282,21 @@ function slot(pos,i,id,pt,capX){
   return '<button class="slot" '+attrs+' aria-label="'+esc(p.n)+'"><span class="tile'+(!show&&rivalOf(p.t)?' hrv':'')+'">'+avatar(id,'lg')+'<span class="cr">'+crest(p.t,18)+'</span>'+corner+mv+'<span class="rpos '+p.p+(show?' pt':'')+'" title="Posición real">'+lab(p.p)+'</span>'+((capX!==undefined?capX:isCap(id))?'<span class="capb" title="Capitán: puntos x2">C</span>':'')+(show?'':availBadge(id))+(show?'':(function(r){return r?'<span class="rv">'+esc(r)+'</span>':''})(rivalOf(p.t)))+'</span><span class="sn">'+esc(short(p.n))+'</span></button>';
 }
 function benchList(){var inL={};POS.forEach(function(q){S.lineup[q].forEach(function(x){if(x!=null)inL[x]=1})});return S.squad.filter(function(id){return !inL[id]&&P[id].p!=='ENT'})}
+// orden de suplentes por posición: primero los que el mánager ha ordenado (S.bo), después por puntos
+function benchSorted(pos){
+  var bo=S.bo||[];
+  return benchList().filter(function(id){return P[id].p===pos}).sort(function(x,y){var a=bo.indexOf(x),b=bo.indexOf(y);if(a<0&&b<0)return P[y].pts-P[x].pts;if(a<0)return 1;if(b<0)return -1;return a-b});
+}
+function benchAll(){var o=[];POS.forEach(function(q){o=o.concat(benchSorted(q))});return o}
 function benchBox(){
   var b=benchList();
   var cells=POS.map(function(pos){
-    var arr=b.filter(function(id){return P[id].p===pos}).sort(function(x,y){return P[y].pts-P[x].pts});
+    var arr=benchSorted(pos);
     if(!arr.length)return '<button class="slot bslot" data-a="bench" data-pos="'+pos+'"><span class="tile"><span class="ph lg empty">+</span></span><span class="sn">'+lab(pos)+'</span></button>';
     var id=arr[0],p=P[id];
     return '<button class="slot bslot" data-a="bench" data-dk="B" data-pos="'+pos+'" data-id="'+id+'" aria-label="Suplentes: '+POSN[pos]+'"><span class="tile">'+avatar(id,'lg')+'<span class="cr">'+crest(p.t,18)+'</span>'+(arr.length>1?'<span class="more">+'+(arr.length-1)+'</span>':'')+availBadge(id)+'</span><span class="sn">'+esc(short(p.n))+'</span></button>';
   }).join('');
-  return '<section class="benchbox"><h3 style="margin:0 0 10px">Banquillo</h3><div class="brow">'+cells+'</div><p class="small muted" style="margin:10px 0 0">Toca un hueco para ver los suplentes de esa posición. También puedes arrastrar la foto de un suplente sobre un titular (en el móvil, mantén pulsado y arrastra).</p><p class="small muted" style="margin:8px 0 0">Si un titular no juega, entra solo el primer suplente de su misma posición que sí juegue y sus puntos cuentan. Cuenta el banquillo que tengas al empezar la jornada.</p></section>';
+  return '<section class="benchbox"><h3 style="margin:0 0 10px">Banquillo</h3><div class="brow">'+cells+'</div><p class="small muted" style="margin:10px 0 0">Toca un hueco para ver los suplentes de esa posición. También puedes arrastrar la foto de un suplente sobre un titular (en el móvil, mantén pulsado y arrastra).</p><p class="small muted" style="margin:8px 0 0">Si un titular no juega, entra solo el primer suplente de su misma posición que sí juegue y sus puntos cuentan. El que ves en cada hueco es el primero; toca para cambiar el orden. Cuenta el banquillo que tengas al empezar la jornada.</p></section>';
 }
 function coachCard(){
   var c=S.coach!=null&&P[S.coach]?S.coach:null;
@@ -2341,7 +2348,7 @@ function pgTile(id,act,tag){
 // pulsar un hueco del once: fotos de quién puede jugar ahí (suplentes primero, luego otros titulares)
 function sheetPick(pos,i){
   var cur=S.lineup[pos][i],gk=(pos==='POR');
-  var bn=benchList().filter(function(id){return P[id].p===pos}).sort(function(x,y){return P[y].pts-P[x].pts});
+  var bn=benchSorted(pos);
   var st=[];POS.forEach(function(q){S.lineup[q].forEach(function(id,k){if(id!=null&&!(q===pos&&k===i)&&P[id].p===pos&&q!==pos)st.push({id:id,pos:q,i:k})})});
   var head=cur!=null?'<div class="shead">'+avatar(cur,'xl')+'<div><h2>'+esc(P[cur].n)+'</h2><div class="psub">'+crest(P[cur].t,18)+' '+(TEAMN[P[cur].t]||P[cur].t)+' '+chip(P[cur].p)+'</div></div></div><p class="muted small" style="margin:6px 0 0">Elige quién juega en su lugar. '+esc(short(P[cur].n))+' pasará al banquillo.</p><button class="btn ghost sm" style="margin-top:8px" data-a="plCtx" data-id="'+cur+'" data-pos="'+pos+'" data-i="'+i+'">Ver estadísticas y más opciones</button>':'<h2>Hueco libre · '+POSN[pos]+'</h2><p class="muted small" style="margin:4px 0 0">Elige quién entra.</p>';
   var g1=bn.length?'<h3 class="pgh">Banquillo</h3><div class="pgrid">'+bn.map(function(id){return pgTile(id,'data-a="subIn" data-id="'+id+'" data-pos="'+pos+'" data-i="'+i+'"','')}).join('')+'</div>':'';
@@ -2349,9 +2356,15 @@ function sheetPick(pos,i){
   openSheet(head+(g1||g2?g1+g2:'<p class="muted" style="margin-top:14px">No tienes más '+POSN[pos].toLowerCase()+'s disponibles.</p>'));
 }
 function sheetBench(pos){
-  var arr=benchList().filter(function(id){return P[id].p===pos}).sort(function(x,y){return P[y].pts-P[x].pts});
+  var arr=benchSorted(pos);
   var listed={};S.listings.forEach(function(l){if(l.seller==='Tú')listed[l.id]=1});
-  openSheet('<h2>Banquillo · '+POSN[pos]+'s</h2><p class="muted small" style="margin:4px 0 0">Elige un suplente y después a quién sustituye.</p>'+(arr.length?'<div class="pgrid">'+arr.map(function(id){return pgTile(id,'data-a="benchPick" data-id="'+id+'"',listed[id]?'En venta':'')}).join('')+'</div>':'<p class="muted" style="margin-top:14px">No tienes suplentes en esta posición.</p>'));
+  if(!arr.length){openSheet('<h2>Banquillo · '+POSN[pos]+'s</h2><p class="muted" style="margin-top:14px">No tienes suplentes en esta posición.</p>');return}
+  var cur=arr[0],others=arr.slice(1),p=P[cur];
+  var st=[];S.lineup[pos].forEach(function(id,k){if(id!=null)st.push({id:id,i:k})});
+  var head='<div class="shead">'+avatar(cur,'xl')+'<div><h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+(TEAMN[p.t]||p.t)+' '+chip(p.p)+(listed[cur]?' · En venta':'')+'</div></div></div><p class="muted small" style="margin:6px 0 0">Primer suplente de '+POSN[pos].toLowerCase()+'s. Elige con quién cambiarlo.</p><button class="btn ghost sm" style="margin-top:8px" data-a="player" data-id="'+cur+'">Ver estadísticas</button>';
+  var g1=others.length?'<h3 class="pgh">Otros suplentes (cambiar el orden)</h3><div class="pgrid">'+others.map(function(id,n){return pgTile(id,'data-a="benchFirst" data-id="'+id+'"',(n+2)+'º suplente'+(listed[id]?' · En venta':''))}).join('')+'</div>':'';
+  var g2=st.length?'<h3 class="pgh">Titulares (entra por uno)</h3><div class="pgrid">'+st.map(function(o){return pgTile(o.id,'data-a="subIn" data-id="'+cur+'" data-pos="'+pos+'" data-i="'+o.i+'"','')}).join('')+'</div>':'';
+  openSheet(head+g1+g2);
 }
 function sheetSub(id){
   var p=P[id],rows=[];
@@ -2364,7 +2377,7 @@ function sheetSub(id){
   });
   rows.sort(function(x,y){return (y.first?1:0)-(x.first?1:0)});
   var own=rows.filter(function(r){return r.first});if(own.length)rows=own;
-  openSheet('<div class="shead">'+avatar(id,'xl')+'<div><h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+(TEAMN[p.t]||p.t)+' '+chip(p.p)+'</div></div></div><p class="muted small" style="margin:4px 0 0">¿A quién sustituye en el once?</p><div class="pgrid">'+rows.map(function(r){
+  openSheet('<div class="shead">'+avatar(id,'xl')+'<div><h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+(TEAMN[p.t]||p.t)+' '+chip(p.p)+'</div></div></div>'+(benchSorted(p.p)[0]!==id&&S.squad.indexOf(id)>-1&&benchList().indexOf(id)>-1?'<button class="btn primary full" style="margin-top:10px" data-a="benchFirst" data-id="'+id+'">Ponerlo de primer suplente</button>':'')+'<p class="muted small" style="margin:10px 0 0">O elige a quién sustituye en el once:</p><div class="pgrid">'+rows.map(function(r){
     if(r.t==null)return '<button class="slot" data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'"><span class="tile"><span class="ph lg empty">+</span></span><span class="sn">'+lab(r.pos)+'</span><span class="pgs">Hueco libre</span></button>';
     return pgTile(r.t,'data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'"',r.pos!==p.p?esc(short(p.n))+' jugaría de '+POSN[r.pos].toLowerCase().replace(/s$/,''):'');
   }).join('')+'</div>');
@@ -4042,6 +4055,7 @@ var A={
   coachSheet:function(){sheetCoach()},
   bench:function(d){sheetBench(d.pos)},
   benchPick:function(d){sheetSub(+d.id)},
+  benchFirst:function(d){var id=+d.id;S.bo=[id].concat(benchAll().filter(function(x){return x!==id}));S.saved=false;closeSheet();toast(short(P[id].n)+' es ahora el primer suplente');render()},
   subIn:function(d){var id=+d.id;closeSheet();swapPlayers({k:'B',id:id},{k:'L',pos:d.pos,i:+d.i})},
   dropSwap:function(d){swapPlayers({k:d.ak,pos:d.apos,i:+d.ai,id:d.aid===undefined?null:+d.aid},{k:d.bk,pos:d.bpos,i:+d.bi,id:d.bid===undefined?null:+d.bid})},
   setCap:function(d){var id=+d.id;if(!S.rules.cap||S.squad.indexOf(id)<0)return;S.cap=id;S.saved=false;closeSheet();toast(short(P[id].n)+' es tu capitán');render()},
