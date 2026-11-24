@@ -26,6 +26,9 @@ export function planRound({ now, matches, members, done }) {
       if (a == null || +a < 0 || inL.has(String(a)) || (m.coach != null && String(m.coach) === String(a))) continue;
       bn.push(a); if (m.role && m.role[a]) rl[a] = m.role[a];
     }
+    // el mánager ordena sus suplentes (m.bo): los que no estén en esa lista van detrás, en el orden de la plantilla
+    const bo = Array.isArray(m.bo) ? m.bo.map(String) : [];
+    if (bo.length) bn.sort((x, y) => { const a = bo.indexOf(String(x)), b = bo.indexOf(String(y)); return (a < 0 ? 1e9 : a) - (b < 0 ? 1e9 : b); });
     elig[uid] = { ok: !neg && n >= MIN_LINEUP, n, neg, lu, cp: m.cap == null ? null : m.cap, co: m.coach == null ? null : m.coach, bn, rl };
   }
   return { round, start, elig };
