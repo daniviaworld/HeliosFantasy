@@ -2341,12 +2341,12 @@ function pgTile(id,act,tag){
 // pulsar un hueco del once: fotos de quién puede jugar ahí (suplentes primero, luego otros titulares)
 function sheetPick(pos,i){
   var cur=S.lineup[pos][i],gk=(pos==='POR');
-  var bn=benchList().filter(function(id){return (P[id].p==='POR')===gk}).sort(function(x,y){return ((eff(y)===pos?1:0)-(eff(x)===pos?1:0))||(P[y].pts-P[x].pts)});
-  var st=[];POS.forEach(function(q){S.lineup[q].forEach(function(id,k){if(id!=null&&!(q===pos&&k===i)&&((q==='POR')===gk))st.push({id:id,pos:q,i:k})})});
+  var bn=benchList().filter(function(id){return P[id].p===pos}).sort(function(x,y){return P[y].pts-P[x].pts});
+  var st=[];POS.forEach(function(q){S.lineup[q].forEach(function(id,k){if(id!=null&&!(q===pos&&k===i)&&P[id].p===pos&&q!==pos)st.push({id:id,pos:q,i:k})})});
   var head=cur!=null?'<div class="shead">'+avatar(cur,'xl')+'<div><h2>'+esc(P[cur].n)+'</h2><div class="psub">'+crest(P[cur].t,18)+' '+(TEAMN[P[cur].t]||P[cur].t)+' '+chip(P[cur].p)+'</div></div></div><p class="muted small" style="margin:6px 0 0">Elige quién juega en su lugar. '+esc(short(P[cur].n))+' pasará al banquillo.</p><button class="btn ghost sm" style="margin-top:8px" data-a="plCtx" data-id="'+cur+'" data-pos="'+pos+'" data-i="'+i+'">Ver estadísticas y más opciones</button>':'<h2>Hueco libre · '+POSN[pos]+'</h2><p class="muted small" style="margin:4px 0 0">Elige quién entra.</p>';
-  var g1=bn.length?'<h3 class="pgh">Banquillo</h3><div class="pgrid">'+bn.map(function(id){return pgTile(id,'data-a="subIn" data-id="'+id+'" data-pos="'+pos+'" data-i="'+i+'"',eff(id)===pos?'':(P[id].p===pos?'':'jugaría de '+POSN[pos].toLowerCase().replace(/s$/,'')))}).join('')+'</div>':'';
-  var g2=st.length?'<h3 class="pgh">Titulares (intercambiar)</h3><div class="pgrid">'+st.map(function(o){return pgTile(o.id,'data-a="swapL" data-apos="'+o.pos+'" data-ai="'+o.i+'" data-bpos="'+pos+'" data-bi="'+i+'"','de '+POSN[o.pos].toLowerCase().replace(/s$/,''))}).join('')+'</div>':'';
-  openSheet(head+(g1||g2?g1+g2:'<p class="muted" style="margin-top:14px">No tienes más jugadores para este puesto.</p>'));
+  var g1=bn.length?'<h3 class="pgh">Banquillo</h3><div class="pgrid">'+bn.map(function(id){return pgTile(id,'data-a="subIn" data-id="'+id+'" data-pos="'+pos+'" data-i="'+i+'"','')}).join('')+'</div>':'';
+  var g2=st.length?'<h3 class="pgh">Titulares de este puesto jugando en otra línea</h3><div class="pgrid">'+st.map(function(o){return pgTile(o.id,'data-a="swapL" data-apos="'+o.pos+'" data-ai="'+o.i+'" data-bpos="'+pos+'" data-bi="'+i+'"','de '+POSN[o.pos].toLowerCase().replace(/s$/,''))}).join('')+'</div>':'';
+  openSheet(head+(g1||g2?g1+g2:'<p class="muted" style="margin-top:14px">No tienes más '+POSN[pos].toLowerCase()+'s disponibles.</p>'));
 }
 function sheetBench(pos){
   var arr=benchList().filter(function(id){return P[id].p===pos}).sort(function(x,y){return P[y].pts-P[x].pts});
@@ -2363,6 +2363,7 @@ function sheetSub(id){
     });
   });
   rows.sort(function(x,y){return (y.first?1:0)-(x.first?1:0)});
+  var own=rows.filter(function(r){return r.first});if(own.length)rows=own;
   openSheet('<div class="shead">'+avatar(id,'xl')+'<div><h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+(TEAMN[p.t]||p.t)+' '+chip(p.p)+'</div></div></div><p class="muted small" style="margin:4px 0 0">¿A quién sustituye en el once?</p><div class="pgrid">'+rows.map(function(r){
     if(r.t==null)return '<button class="slot" data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'"><span class="tile"><span class="ph lg empty">+</span></span><span class="sn">'+lab(r.pos)+'</span><span class="pgs">Hueco libre</span></button>';
     return pgTile(r.t,'data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'"',r.pos!==p.p?esc(short(p.n))+' jugaría de '+POSN[r.pos].toLowerCase().replace(/s$/,''):'');
