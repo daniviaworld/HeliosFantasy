@@ -1196,6 +1196,12 @@ body.cl-on{background:#030a2e!important}
 @keyframes cliBeam{0%{opacity:0;transform:rotate(var(--s))}25%{opacity:.9}100%{opacity:.55;transform:rotate(var(--e))}}
 #clIntro .cli-cf{position:absolute;top:-24px;width:var(--w);height:calc(var(--w)*1.7);background:var(--c);border-radius:1px;opacity:0;animation:cliCf var(--s) linear var(--d) both}
 @keyframes cliCf{0%{opacity:1;transform:translateY(0) rotate(var(--r)) rotateX(0)}100%{opacity:1;transform:translateY(112vh) rotate(calc(var(--r) + 540deg)) rotateX(720deg)}}
+/* selector de cambios: fotos de los jugadores disponibles */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:14px 8px;justify-items:center;margin:12px 0 4px}
+.pgrid .slot{width:70px}
+.pgrid .slot .sn{width:70px}
+.pgs{font:600 10px/1.3 var(--font-body);color:var(--muted);margin-top:3px;text-align:center;max-width:74px}
+.pgh{margin:18px 0 0;font:700 13px/1.3 var(--font-body);color:var(--fg)}
 /*THEME-END*/
 </style>
 
@@ -2328,12 +2334,24 @@ function swapPlayers(a,b){
   toast(a.pos===b.pos?'Jugadores intercambiados':short(P[aid].n)+' juega de '+POSN[b.pos].toLowerCase()+' y '+short(P[bid2].n)+' de '+POSN[a.pos].toLowerCase());
   render();
 }
+function pgTile(id,act,tag){
+  var p=P[id],pt=p.f[4];
+  return '<button class="slot" '+act+' aria-label="'+esc(p.n)+'"><span class="tile">'+avatar(id,'lg')+'<span class="cr">'+crest(p.t,18)+'</span><span class="ptc '+(pt>0?'pg':pt<0?'pr':'py')+'" title="Puntos de la última jornada">'+pt+'</span><span class="rpos '+p.p+' pt" title="Posición real">'+lab(p.p)+'</span>'+availBadge(id)+'</span><span class="sn">'+esc(short(p.n))+'</span>'+(tag?'<span class="pgs">'+tag+'</span>':'')+'</button>';
+}
+// pulsar un hueco del once: fotos de quién puede jugar ahí (suplentes primero, luego otros titulares)
+function sheetPick(pos,i){
+  var cur=S.lineup[pos][i],gk=(pos==='POR');
+  var bn=benchList().filter(function(id){return (P[id].p==='POR')===gk}).sort(function(x,y){return ((eff(y)===pos?1:0)-(eff(x)===pos?1:0))||(P[y].pts-P[x].pts)});
+  var st=[];POS.forEach(function(q){S.lineup[q].forEach(function(id,k){if(id!=null&&!(q===pos&&k===i)&&((q==='POR')===gk))st.push({id:id,pos:q,i:k})})});
+  var head=cur!=null?'<div class="shead">'+avatar(cur,'xl')+'<div><h2>'+esc(P[cur].n)+'</h2><div class="psub">'+crest(P[cur].t,18)+' '+(TEAMN[P[cur].t]||P[cur].t)+' '+chip(P[cur].p)+'</div></div></div><p class="muted small" style="margin:6px 0 0">Elige quién juega en su lugar. '+esc(short(P[cur].n))+' pasará al banquillo.</p><button class="btn ghost sm" style="margin-top:8px" data-a="plCtx" data-id="'+cur+'" data-pos="'+pos+'" data-i="'+i+'">Ver estadísticas y más opciones</button>':'<h2>Hueco libre · '+POSN[pos]+'</h2><p class="muted small" style="margin:4px 0 0">Elige quién entra.</p>';
+  var g1=bn.length?'<h3 class="pgh">Banquillo</h3><div class="pgrid">'+bn.map(function(id){return pgTile(id,'data-a="subIn" data-id="'+id+'" data-pos="'+pos+'" data-i="'+i+'"',eff(id)===pos?'':(P[id].p===pos?'':'jugaría de '+POSN[pos].toLowerCase().replace(/s$/,'')))}).join('')+'</div>':'';
+  var g2=st.length?'<h3 class="pgh">Titulares (intercambiar)</h3><div class="pgrid">'+st.map(function(o){return pgTile(o.id,'data-a="swapL" data-apos="'+o.pos+'" data-ai="'+o.i+'" data-bpos="'+pos+'" data-bi="'+i+'"','de '+POSN[o.pos].toLowerCase().replace(/s$/,''))}).join('')+'</div>':'';
+  openSheet(head+(g1||g2?g1+g2:'<p class="muted" style="margin-top:14px">No tienes más jugadores para este puesto.</p>'));
+}
 function sheetBench(pos){
   var arr=benchList().filter(function(id){return P[id].p===pos}).sort(function(x,y){return P[y].pts-P[x].pts});
   var listed={};S.listings.forEach(function(l){if(l.seller==='Tú')listed[l.id]=1});
-  openSheet('<h2>Banquillo · '+POSN[pos]+(pos==='POR'?'es':'s')+'</h2><p class="muted small" style="margin:4px 0 0">Elige un suplente y después a quién sustituye.</p><div class="list">'+(arr.map(function(id){
-    return '<button class="prow" data-a="benchPick" data-id="'+id+'">'+avatar(id)+'<span class="pmain"><span class="pname">'+esc(P[id].n)+'</span><span class="psub">'+P[id].t+(listed[id]?' · En venta':'')+'</span></span><span class="pright"><b>'+P[id].f[4]+'</b><small>últ. jornada</small></span></button>';
-  }).join('')||'<p class="muted">No tienes suplentes en esta posición.</p>')+'</div>');
+  openSheet('<h2>Banquillo · '+POSN[pos]+'s</h2><p class="muted small" style="margin:4px 0 0">Elige un suplente y después a quién sustituye.</p>'+(arr.length?'<div class="pgrid">'+arr.map(function(id){return pgTile(id,'data-a="benchPick" data-id="'+id+'"',listed[id]?'En venta':'')}).join('')+'</div>':'<p class="muted" style="margin-top:14px">No tienes suplentes en esta posición.</p>'));
 }
 function sheetSub(id){
   var p=P[id],rows=[];
@@ -2345,9 +2363,9 @@ function sheetSub(id){
     });
   });
   rows.sort(function(x,y){return (y.first?1:0)-(x.first?1:0)});
-  openSheet('<div class="shead">'+avatar(id,'xl')+'<div><h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+(TEAMN[p.t]||p.t)+' '+chip(p.p)+'</div></div></div><p class="muted small" style="margin:4px 0 0">¿A quién sustituye en el once?</p><div class="list">'+rows.map(function(r){
-    if(r.t==null)return '<button class="prow" data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'"><span class="pmain"><span class="pname">Hueco libre</span><span class="psub">'+POSN[r.pos]+'</span></span><span class="pright"><small>Entrar</small></span></button>';
-    return '<button class="prow" data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'">'+avatar(r.t)+'<span class="pmain"><span class="pname">'+esc(P[r.t].n)+'</span><span class="psub">Juega de '+POSN[r.pos].toLowerCase()+(r.pos!==p.p?' · '+esc(short(p.n))+' jugaría de '+POSN[r.pos].toLowerCase():'')+'</span></span><span class="pright"><b>'+P[r.t].f[4]+'</b><small>últ. jornada</small></span></button>';
+  openSheet('<div class="shead">'+avatar(id,'xl')+'<div><h2>'+esc(p.n)+'</h2><div class="psub">'+crest(p.t,18)+' '+(TEAMN[p.t]||p.t)+' '+chip(p.p)+'</div></div></div><p class="muted small" style="margin:4px 0 0">¿A quién sustituye en el once?</p><div class="pgrid">'+rows.map(function(r){
+    if(r.t==null)return '<button class="slot" data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'"><span class="tile"><span class="ph lg empty">+</span></span><span class="sn">'+lab(r.pos)+'</span><span class="pgs">Hueco libre</span></button>';
+    return pgTile(r.t,'data-a="subIn" data-id="'+id+'" data-pos="'+r.pos+'" data-i="'+r.i+'"',r.pos!==p.p?esc(short(p.n))+' jugaría de '+POSN[r.pos].toLowerCase().replace(/s$/,''):'');
   }).join('')+'</div>');
 }
 function coachBlock(){
@@ -4122,8 +4140,10 @@ var A={
   reject:function(d){S.offers.splice(+d.i,1);toast('Oferta rechazada');render()},
   resolve:function(){resolveMarket()},
   formation:function(d){applyFormation(d.f);render()},
-  slot:function(d){var id=S.lineup[d.pos][+d.i];if(id==null)sheetSlot(d.pos,+d.i);else sheetPlayer(id,{pos:d.pos,i:+d.i})},
-  swap:function(d){sheetSlot(d.pos,+d.i)},
+  slot:function(d){sheetPick(d.pos,+d.i)},
+  plCtx:function(d){sheetPlayer(+d.id,{pos:d.pos,i:+d.i})},
+  swapL:function(d){closeSheet();swapPlayers({k:'L',pos:d.apos,i:+d.ai},{k:'L',pos:d.bpos,i:+d.bi})},
+  swap:function(d){sheetPick(d.pos,+d.i)},
   moveSheet:function(d){sheetMove(d.pos,+d.i)},
   doMove:function(d){
     var pos=d.pos,i=+d.i,to=d.to,id=S.lineup[pos][i],c=moveCheck(pos,to);
