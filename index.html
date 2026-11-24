@@ -1312,12 +1312,30 @@ function lateIn(r,uid){var sn=S.rsnap&&S.rsnap[r];return !!(sn&&Object.keys(sn).
 function liveEligible(uid){if(CUR&&lateIn(CUR,uid))return false;var e=S.rsnap&&CUR&&S.rsnap[CUR]&&S.rsnap[CUR][uid];return !(e&&e.ok===false)}
 // el once de cada mánager al empezar la jornada (foto del servidor); si no existe, se usa el actual
 function snapOf(r,uid){var e=S.rsnap&&S.rsnap[r]&&S.rsnap[r][uid];return e&&e.lu?e:null}
-function ptsLineup(r,uid,cur){var e=snapOf(r,uid);return e?{lu:e.lu,co:e.co,cp:e.cp,snap:true}:cur}
-function myCur(){return {lu:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},co:S.coach!=null?toA(S.coach):null,cp:S.cap!=null?toA(S.cap):null}}
+function ptsLineup(r,uid,cur){var e=snapOf(r,uid);return e?{lu:e.lu,co:e.co,cp:e.cp,bn:e.bn,rl:e.rl,snap:true}:cur}
+function benchSnap(){var inL={},bn=[],rl={};POS.forEach(function(q){S.lineup[q].forEach(function(x){if(x!=null)inL[x]=1})});S.squad.forEach(function(id){if(inL[id]||!P[id]||P[id].p==='ENT'||id===S.coach)return;var a=toA(id);bn.push(a);if(S.role[id])rl[a]=S.role[id]});return {bn:bn,rl:rl}}
+function myCur(){var b=benchSnap();return {lu:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},co:S.coach!=null?toA(S.coach):null,cp:S.cap!=null?toA(S.cap):null,bn:b.bn,rl:b.rl}}
+// Sustituciones automáticas: si un titular no juega (su partido ya acabó y no tiene puntos), entra el primer suplente
+// de su misma línea que sí jugó. Misma regla que el servidor (rounds-lib.mjs subsFor).
+function subsOf(L,r){
+  var res=[];if(!REAL||!L||!L.bn||!L.bn.length)return res;
+  var cf=coreFx(),dn=roundsDone().indexOf(r)>-1,used={};
+  var idx=function(a){var i=fromA(a);return (i!=null&&P[i])?i:null};
+  var played=function(a){var i=idx(a);if(i==null)return false;var j=P[i].jp;return !!((j&&j[r]!=null)||(r===CUR&&P[i].lv))};
+  var done=function(a){var i=idx(a);if(i==null)return false;if(dn)return true;var t=P[i].t,ms=cf.filter(function(m){return m.r===r&&(m.h===t||m.a===t)});return ms.length>0&&ms.every(function(m){return m.st==='post'})};
+  var line=function(b){var i=idx(b);return (L.rl&&L.rl[b])||(i!=null?P[i].p:null)};
+  ['POR','DEF','MED','DEL'].forEach(function(pos){((L.lu&&L.lu[pos])||[]).forEach(function(a){
+    if(a==null||!done(a)||played(a))return;
+    var b=null;for(var k=0;k<L.bn.length;k++){var x=L.bn[k];if(!used[x]&&line(x)===pos&&played(x)){b=x;break}}
+    if(b!=null){used[b]=1;res.push({out:a,in:b,pos:pos})}
+  })});
+  return res;
+}
 function sumLineup(L,r){
   var t=0,capOn=!!(S.rules&&S.rules.cap);
   ['POR','DEF','MED','DEL'].forEach(function(pp){((L.lu&&L.lu[pp])||[]).forEach(function(a){if(a==null)return;var i=fromA(a);if(i==null||!P[i])return;t+=roundPts(i,r)*((capOn&&L.cp!=null&&a===L.cp)?2:1)})});
   if(L.co!=null){var ci=fromA(L.co);if(ci!=null&&P[ci])t+=roundPts(ci,r)}
+  subsOf(L,r).forEach(function(s){var bi=fromA(s.in);if(bi!=null&&P[bi])t+=roundPts(bi,r)});
   return t;
 }
 function liveFor(lu,co,cp,uid){
@@ -1460,7 +1478,8 @@ function applyMarket(){
   if(!S.mkt)return;
   P.forEach(function(p){VAL[p.id]=p.v});
   var vs=S.mkt.values||{};
-  Object.keys(vs).forEach(function(a){var i=IDX[a];if(i==null)return;VAL[i]=+vs[a];var b=P[i].v,h=[];for(var k=0;k<14;k++)h.push(b);h.push(VAL[i]);HIST[i]=h});
+  Object.keys(vs).forEach(function(a){var i=IDX[a];if(i==null)return;VAL[i]=+vs[a];var b=VAL[i],h=[];for(var k=0;k<14;k++)h.push(b);h.push(VAL[i]);HIST[i]=h});
+  var vh=S.mkt.vh||{};Object.keys(vh).forEach(function(a){var i=IDX[a],q=vh[a];if(i==null||!Array.isArray(q)||!q.length)return;q=q.map(Number);while(q.length<15)q.unshift(q[0]);q=q.slice(-15);VAL[i]=q[q.length-1];HIST[i]=q});
   S.mktEnd=S.mkt.end;
   if(S.mktRound!=null&&S.mkt.round!==S.mktRound)S.bids={};
   S.mktRound=S.mkt.round;
@@ -2264,7 +2283,7 @@ function benchBox(){
     var id=arr[0],p=P[id];
     return '<button class="slot bslot" data-a="bench" data-dk="B" data-pos="'+pos+'" data-id="'+id+'" aria-label="Suplentes: '+POSN[pos]+'"><span class="tile">'+avatar(id,'lg')+'<span class="cr">'+crest(p.t,18)+'</span>'+(arr.length>1?'<span class="more">+'+(arr.length-1)+'</span>':'')+availBadge(id)+'</span><span class="sn">'+esc(short(p.n))+'</span></button>';
   }).join('');
-  return '<section class="benchbox"><h3 style="margin:0 0 10px">Banquillo</h3><div class="brow">'+cells+'</div><p class="small muted" style="margin:10px 0 0">Toca un hueco para ver los suplentes de esa posición. También puedes arrastrar la foto de un suplente sobre un titular (en el móvil, mantén pulsado y arrastra).</p></section>';
+  return '<section class="benchbox"><h3 style="margin:0 0 10px">Banquillo</h3><div class="brow">'+cells+'</div><p class="small muted" style="margin:10px 0 0">Toca un hueco para ver los suplentes de esa posición. También puedes arrastrar la foto de un suplente sobre un titular (en el móvil, mantén pulsado y arrastra).</p><p class="small muted" style="margin:8px 0 0">Si un titular no juega, entra solo el primer suplente de su misma posición que sí juegue y sus puntos cuentan. Cuenta el banquillo que tengas al empezar la jornada.</p></section>';
 }
 function coachCard(){
   var c=S.coach!=null&&P[S.coach]?S.coach:null;
@@ -2395,11 +2414,12 @@ function teamPtsReal(){
   var PL=ptsLineup(sel,S.user.uid,myCur()),capA=(S.rules.cap&&PL.cp!=null)?PL.cp:null;
   var pitch=['DEL','MED','DEF','POR'].map(function(pos){return '<div class="prow2">'+((PL.lu&&PL.lu[pos])||[]).map(function(a,i){var id=a==null?null:fromA(a);if(id!=null&&!P[id])id=null;return slot(pos,i,id,id!=null?roundPts(id,sel)*((capA!=null&&a===capA)?2:1):0,!!(id!=null&&capA!=null&&a===capA))}).join('')+'</div>'}).join('');
   var tot=lineupRound(sel),counts=sel>=r0;
+  var sb=subsOf(PL,sel),subsBox=sb.length?'<div class="panel pad" style="margin-top:12px"><b>Banquillo</b>'+sb.map(function(q){var o=fromA(q.out),n=fromA(q.in);return '<p class="small" style="margin:6px 0 0"><b>'+esc(short(P[n].n))+'</b> entra por '+esc(short(P[o].n))+' (no jugó) · '+(roundPts(n,sel)>0?'+':'')+roundPts(n,sel)+' pts</p>'}).join('')+'</div>':'';
   var coId=PL.co!=null?fromA(PL.co):null;
   var coach='';if(coId!=null&&P[coId]){var cpt=roundPts(coId,sel);coach='<div class="coachbox cpts"><small>Entrenador</small><div class="slot"><span class="tile">'+avatar(coId,'lg')+'<span class="cr">'+crest(P[coId].t,18)+'</span><span class="ptc '+(cpt>0?'pg':cpt<0?'pr':'py')+'">'+cpt+'</span></span><span class="sn">'+esc(short(P[coId].n))+'</span></div></div>'}
   return '<div class="jbar" id="jbar">'+bub+'</div>'+
     '<div class="panel kvs"><div class="kv"><span>'+(sel===CUR&&liveOn()&&!(S.rp&&S.rp[sel]!=null)?'Jornada '+sel+' · EN DIRECTO (provisional)':counts?'Jornada '+sel:'Jornada '+sel+' (tu once actual, solo informativo)')+'</span><b>'+(counts?tot+' pts':tot+' pts · no suma')+'</b></div>'+(counts?'<div class="kv"><span>Prima por puntos</span><b>'+fmt(tot*S.rules.bonus)+'</b></div>':'<div class="kv"><span>Jornada anterior a tu entrada</span><b>no cuenta</b></div>')+'</div>'+
-    '<div class="pitch" style="margin-top:12px">'+pitch+'</div>'+coach+
+    '<div class="pitch" style="margin-top:12px">'+pitch+'</div>'+coach+subsBox+
     '<p class="small muted" style="margin:8px 2px 0">'+(PL.snap?'Se muestra el once con el que empezó la jornada ':'Se muestra tu once actual ')+'con los puntos que hizo cada jugador esa jornada.'+(S.rules.cap?' El capitán cuenta doble.':'')+'</p>';
 }
 function teamPts(){
