@@ -1257,6 +1257,7 @@ body.cl-on{background:#030a2e!important}
 #fxlive div.neg{border-color:#F5AA85}
 #fxlive div b{color:#8BE9BD}#fxlive div.neg b{color:#F5AA85}
 @media (prefers-reduced-motion:reduce){#fxsign .fxc{animation:none}#fxsign i.cf{display:none}}
+.seg.fit.n4{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:5px}.seg.fit.n4 button{font-size:12.5px;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:42px}
 /*THEME-END*/
 </style>
 
@@ -1385,11 +1386,13 @@ function subsOf(L,r){
   var played=function(a){var i=idx(a);if(i==null)return false;var j=P[i].jp;return !!((j&&j[r]!=null)||(r===CUR&&P[i].lv))};
   var done=function(a){var i=idx(a);if(i==null)return false;if(dn)return true;var t=P[i].t,ms=cf.filter(function(m){return m.r===r&&(m.h===t||m.a===t)});return ms.length>0&&ms.every(function(m){return m.st==='post'})};
   var line=function(b){var i=idx(b);return (L.rl&&L.rl[b])||(i!=null?P[i].p:null)};
-  ['POR','DEF','MED','DEL'].forEach(function(pos){((L.lu&&L.lu[pos])||[]).forEach(function(a){
-    if(a==null||!done(a)||played(a))return;
-    var b=null;for(var k=0;k<L.bn.length;k++){var x=L.bn[k];if(!used[x]&&line(x)===pos&&played(x)){b=x;break}}
-    if(b!=null){used[b]=1;res.push({out:a,in:b,pos:pos})}
-  })});
+  ['POR','DEF','MED','DEL'].forEach(function(pos){
+    var head=null;for(var k=0;k<L.bn.length;k++){if(line(L.bn[k])===pos){head=L.bn[k];break}}
+    if(head==null||!played(head))return;
+    var out=null,lu=(L.lu&&L.lu[pos])||[];
+    for(var q=0;q<lu.length;q++){var a=lu[q];if(a!=null&&done(a)&&!played(a)){out=a;break}}
+    if(out!=null)res.push({out:out,in:head,pos:pos});
+  });
   return res;
 }
 function sumLineup(L,r){
@@ -2393,7 +2396,7 @@ function benchBox(){
     var id=arr[0],p=P[id];
     return '<button class="slot bslot" data-a="bench" data-dk="B" data-pos="'+pos+'" data-id="'+id+'" aria-label="Suplentes: '+POSN[pos]+'"><span class="tile">'+avatar(id,'lg')+'<span class="cr">'+crest(p.t,18)+'</span>'+(arr.length>1?'<span class="more">+'+(arr.length-1)+'</span>':'')+availBadge(id)+'</span><span class="sn">'+esc(short(p.n))+'</span></button>';
   }).join('');
-  return '<section class="benchbox"><h3 style="margin:0 0 10px">Banquillo</h3><div class="brow">'+cells+'</div><p class="small muted" style="margin:10px 0 0">Toca un hueco para ver los suplentes de esa posición. También puedes arrastrar la foto de un suplente sobre un titular (en el móvil, mantén pulsado y arrastra).</p><p class="small muted" style="margin:8px 0 0">Si un titular no juega, entra solo el primer suplente de su misma posición que sí juegue y sus puntos cuentan. El que ves en cada hueco es el primero; toca para cambiar el orden. Cuenta el banquillo que tengas al empezar la jornada.</p></section>';
+  return '<section class="benchbox"><h3 style="margin:0 0 10px">Banquillo</h3><div class="brow">'+cells+'</div><p class="small muted" style="margin:10px 0 0">Toca un hueco para ver los suplentes de esa posición. También puedes arrastrar la foto de un suplente sobre un titular (en el móvil, mantén pulsado y arrastra).</p><p class="small muted" style="margin:8px 0 0">Solo puntúa el primer suplente de cada posición (el que ves en cada hueco), y solo si un titular de su posición no juega. Los demás suplentes nunca cuentan; toca para cambiar el orden. Cuenta el banquillo que tengas al empezar la jornada.</p></section>';
 }
 function coachCard(){
   var c=S.coach!=null&&P[S.coach]?S.coach:null;
@@ -2679,7 +2682,7 @@ function viewLiga(){
   if(S.sort==='cash')S.sort='tot';
   var k=S.sort,r=ranking();
   var raceOn=!!S.race&&!!raceData();if(!raceOn)raceStop();
-  var seg='<div class="seg" role="group" aria-label="Ordenar clasificación">'+[['tot','Puntos'],['j','Jornada '+(REAL?(rkSel()===CUR&&liveOn()?CUR+' ●':(rkSel()||'–')):8)],['val','Valor']].map(function(m){return '<button data-a="sort" data-k="'+m[0]+'" aria-pressed="'+(!raceOn&&k===m[0])+'">'+m[1]+'</button>'}).join('')+(raceData()?'<button data-a="race" aria-pressed="'+raceOn+'">Carrera</button>':'')+'</div>';
+  var seg='<div class="seg fit n4" role="group" aria-label="Ordenar clasificación">'+[['tot','Puntos'],['j','Jornada '+(REAL?(rkSel()===CUR&&liveOn()?CUR+' ●':(rkSel()||'–')):8)],['val','Valor']].map(function(m){return '<button data-a="sort" data-k="'+m[0]+'" aria-pressed="'+(!raceOn&&k===m[0])+'">'+m[1]+'</button>'}).join('')+(raceData()?'<button data-a="race" aria-pressed="'+raceOn+'">Carrera</button>':'')+'</div>';
   var pod=!raceOn&&r.length>=3&&(k==='tot'||k==='j'),pm=(REAL&&CUR&&k==='tot')?r.slice().sort(function(a,b){return (b.tot-b.j)-(a.tot-a.j)}):null;
   var rows=r.map(function(m,i){
     var main=k==='tot'||k==='j'?num(m[k])+' pts':fmt(m[k]);
