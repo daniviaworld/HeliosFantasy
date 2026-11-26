@@ -88,12 +88,12 @@ function start(){
 function draw(){
   if(!user){
     $app.innerHTML='<div class="login"><h1 style="font-size:40px;margin-bottom:4px">HELIOS</h1><div class="mut" style="margin-bottom:16px">Panel de control</div><form class="card" id="f" style="padding:22px"><label for="m">Correo</label><input id="m" type="email" autocomplete="username" required><label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required><button class="btn pri" style="width:100%;margin-top:16px" '+(busy?'disabled':'')+'>Entrar</button>'+(err?'<div class="err">'+esc(err)+'</div>':'')+'</form></div>';
-    document.getElementById('f').onsubmit=function(e){e.preventDefault();busy=true;err='';draw();auth.signInWithEmailAndPassword(document.getElementById('m').value.trim(),document.getElementById('p').value).catch(function(x){err='Correo o contraseña incorrectos.'}).then(function(){busy=false;if(!auth.currentUser)draw()})};
+    document.getElementById('f').onsubmit=function(e){e.preventDefault();busy=true;err='';draw();auth.signInWithEmailAndPassword(document.getElementById('m').value.trim().toLowerCase(),document.getElementById('p').value).catch(function(x){var c=(x&&x.code)||'';err=/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)?'Correo o contraseña incorrectos. Usa el mismo correo con el que entras en la app.':/too-many/.test(c)?'Demasiados intentos. Espera unos minutos y vuelve a probar.':/network/.test(c)?'Sin conexión con Firebase. Revisa tu internet.':/invalid-email/.test(c)?'El correo no es válido.':/unauthorized-domain|operation-not-allowed|api-key/.test(c)?'Firebase no permite entrar desde esta dirección ('+c+').':'No se pudo entrar ('+(c||(x&&x.message)||'error')+').'}).then(function(){busy=false;if(!auth.currentUser)draw()})};
     return;
   }
   if(!D){$app.innerHTML=top()+'<div class="wrap mut">'+(err?'':'Cargando datos…')+'</div>';return}
   if(D.denied&&!D.failed){
-    $app.innerHTML=top()+'<div class="wrap"><div class="card pad"><h2>Falta darte permiso de administrador</h2><p>Esta cuenta ('+esc(user.email)+') todavía no es administradora. Solo hay que hacer esto una vez:</p><ol><li>Abre Firebase → Firestore Database.</li><li>Crea la colección <code>admins</code>.</li><li>Como ID del documento pon: <code>'+esc(user.uid)+'</code> (cualquier campo, por ejemplo <code>ok</code> = <code>true</code>).</li><li>Comprueba que las reglas de seguridad incluyen las de administrador (vienen en el archivo <code>firestore-admin.rules.txt</code>).</li><li>Vuelve aquí y pulsa Actualizar.</li></ol></div></div>';
+    $app.innerHTML=top()+'<div class="wrap"><div class="card pad"><h2>Falta darte permiso de administrador</h2><p>Esta cuenta ('+esc(user.email)+') todavía no es administradora. Solo hay que hacer esto una vez:</p><ol><li>Abre Firebase → Firestore Database.</li><li>Crea la colección <code>admins</code>.</li><li>Como ID del documento pon: <code>'+esc(user.uid)+'</code> (cualquier campo, por ejemplo <code>ok</code> = <code>true</code>).</li><li>Comprueba que las reglas de seguridad incluyen las de administrador (vienen en el archivo <code>firestore.rules</code>).</li><li>Vuelve aquí y pulsa Actualizar.</li></ol></div></div>';
     return;
   }
   $app.innerHTML=top()+body();
@@ -161,7 +161,7 @@ function build(){
   return {users:users,cnt:cnt,days:days,alerts:alerts,mgr:mgr,news:news.slice(0,30),avT:avT,seT:seT,fxT:fxT};
 }
 function body(){
-  if(D.failed)return '<div class="wrap"><div class="card pad"><h2>No se pudieron leer los datos</h2><p class="mut">'+(D.denied?'Las reglas de Firestore no permiten leer todo todavía. Publica las reglas de administrador (archivo <code>firestore-admin.rules.txt</code>) y pulsa Actualizar.':esc(err))+'</p></div></div>';
+  if(D.failed)return '<div class="wrap"><div class="card pad"><h2>No se pudieron leer los datos</h2><p class="mut">'+(D.denied?'Las reglas de Firestore no permiten leer todo todavía. Publica las reglas de administrador (archivo <code>firestore.rules</code>) y pulsa Actualizar.':esc(err))+'</p></div></div>';
   var B=build(),h='<div class="wrap">';
   h+='<div class="grid kpis">'+
    kpi(B.users.length,'Usuarios')+kpi(B.cnt(24),'Activos hoy (24 h)',B.cnt(24)?'ok':'')+kpi(B.cnt(168),'Activos 7 días')+kpi(B.cnt(720),'Activos 30 días')+kpi(D.leagues.length,'Ligas')+kpi(B.mgr,'Mánagers en ligas')+
