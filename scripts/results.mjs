@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import { norm } from './lib.mjs';
 import { planSettle, planBonus, planIdeal, payIdeal } from './rounds-lib.mjs';
-import { parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched, statArr, addStat , planSuspensions, parseInjuries, parseApiInjuries } from './results-lib.mjs';
+import { parseBiwenger, parseLaLigaFantasy, parseScoreboard, assignRounds, currentRound, lastCompleteRound, medianPlayed, shiftRounds, makeTeamMap, makeMatcher, scoreMatch, finalizePoints, coachPoints, resolveUnmatched, statArr, addStat , planSuspensions, parseInjuries, parseApiInjuries } from './results-lib.mjs';
 
 const DRY = !!process.env.DRY_RUN, FULL = !!process.env.FULL;
 const SA = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -287,6 +287,26 @@ try {
           }
         } catch (e) { console.warn('API-Football (lesiones) falló:', e.message); }
       } else console.log('Sin API_FOOTBALL_KEY: solo se usan las lesiones de ESPN.');
+      // Biwenger y LaLiga Fantasy: lesionados al momento, sin clave. Se suman a lo anterior (no pisan a ESPN ni a API-Football).
+      let pubOk = false;
+      for (const [label, url, parse] of [
+        ['Biwenger', 'https://cf.biwenger.com/api/v2/competitions/la-liga/data?lang=es&score=5', parseBiwenger],
+        ['LaLiga Fantasy', 'https://api-fantasy.llt-services.com/api/v3/players?x-lang=es', parseLaLigaFantasy],
+      ]) {
+        try {
+          const r = await fetch(url, { headers: { ...H, Accept: 'application/json' } });
+          if (!r.ok) { console.warn(`${label} (lesiones): HTTP ${r.status}`); continue; }
+          const list = parse(await r.json()); let n = 0, miss = 0;
+          for (const x of list) {
+            const api = matcher(teamCode(x.team) || '', x.names, null);
+            if (api == null || !byApi[api]) { miss++; continue; }
+            if (!fresh[api]) { fresh[api] = { s: x.info.s, n: x.info.n }; n++; }
+          }
+          if (list.length) pubOk = true;
+          console.log(`Lesionados según ${label}:`, n, `nuevos (de ${list.length} con baja, ${miss} sin emparejar)`);
+        } catch (e) { console.warn(`${label} (lesiones) falló:`, e.message); }
+      }
+      if (pubOk) afOk = true;
       if (afOk || (teams.size >= 10 && okT >= teams.size - 2)) { inj = fresh; injAt = +now; }
       else console.warn('Sin datos fiables de lesiones; se mantienen las anteriores.');
     }

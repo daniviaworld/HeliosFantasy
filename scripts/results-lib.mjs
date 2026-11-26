@@ -434,3 +434,32 @@ export function parseApiInjuries(j, nowMs) {
   }
   return out;
 }
+
+// ---- Lesionados al instante desde fuentes públicas sin clave (Biwenger y LaLiga Fantasy)
+const injKind = (st) => {
+  const s = String(st || '').toLowerCase();
+  if (/injur|lesion|^out$|baja/.test(s)) return 'Out';
+  if (/doubt|duda|question/.test(s)) return 'Duda';
+  return null; // ok, sancionado, apercibido… no cuentan como lesión
+};
+// Biwenger: { data: { teams: {id:{name}}, players: {id:{name, teamID, status, statusInfo}} } } → [{team, names, info}]
+export function parseBiwenger(j) {
+  const d = (j && j.data) || j || {}, teams = d.teams || {}, out = [];
+  for (const p of Object.values(d.players || {})) {
+    if (!p) continue;
+    const s = injKind(p.status); if (!s) continue;
+    const t = teams[p.teamID] || teams[String(p.teamID)];
+    out.push({ team: (t && t.name) || '', names: [norm(p.name || '')].filter(Boolean), info: { s, n: String(p.statusInfo || '').replace(/\s+/g, ' ').trim().slice(0, 140) } });
+  }
+  return out;
+}
+// LaLiga Fantasy: [{ nickname, name, team:{name}, playerStatus }] → [{team, names, info}]
+export function parseLaLigaFantasy(j) {
+  const arr = Array.isArray(j) ? j : (j && (j.players || j.data)) || [], out = [];
+  for (const p of arr) {
+    if (!p) continue;
+    const s = injKind(p.playerStatus || p.status); if (!s) continue;
+    out.push({ team: (p.team && (p.team.name || p.team.shortName)) || '', names: [norm(p.name || ''), norm(p.nickname || '')].filter(Boolean), info: { s, n: '' } });
+  }
+  return out;
+}
