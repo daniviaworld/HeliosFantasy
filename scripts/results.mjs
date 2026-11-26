@@ -297,8 +297,9 @@ try {
           if (!r.ok) { console.warn(`${label} (lesiones): HTTP ${r.status}`); continue; }
           const list = parse(await r.json()); let n = 0, miss = 0; const noTeam = new Set(), lost = [];
           for (const x of list) {
-            const api = matcher(teamCode(x.team) || '', x.names, null);
-            if (!teamCode(x.team)) noTeam.add(x.team || '(sin equipo)');
+            const tc = teamCode(x.team) || { racing: 'SAN', athletic: 'BIL', atletico: 'ATM', 'athletic club': 'BIL', 'atletico madrid': 'ATM', 'racing santander': 'SAN' }[norm(x.team)] || '';
+            const api = matcher(tc, x.names, null);
+            if (!tc) noTeam.add(x.team || '(sin equipo)');
             if (api == null || !byApi[api]) { miss++; if (lost.length < 6) lost.push(x.names[0]); continue; }
             if (!fresh[api]) { fresh[api] = { s: x.info.s, n: x.info.n }; n++; }
           }
