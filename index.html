@@ -1701,6 +1701,22 @@ function liveCheck(){
     LVSEEN=cur;
   }catch(e){}
 }
+var APPV='2026-11-26',BEATT=null,BEAT0=true;
+function beat(){
+  try{
+    if(!REAL||!CLOUD||!db||!S.user||document.hidden)return;
+    var ua=navigator.userAgent||'',pl=/Android/i.test(ua)?'android':/iPhone|iPad|iPod/i.test(ua)?'ios':/Windows/i.test(ua)?'windows':/Mac/i.test(ua)?'mac':/Linux/i.test(ua)?'linux':'otro';
+    var app=false;try{app=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true||/HeliosApp/i.test(ua)}catch(e){}
+    var d={uid:S.user.uid,name:S.user.name,email:S.user.email||'',lastSeen:Date.now(),plat:pl,mode:app?'app':'web',ver:APPV,nl:(S.leagues||[]).length,tab:S.tab||'',fav:S.fav||''};
+    try{var cu=auth.currentUser;if(cu&&cu.metadata&&cu.metadata.creationTime)d.created=Date.parse(cu.metadata.creationTime)||0}catch(e){}
+    if(BEAT0){d.opens=FB.firestore.FieldValue.increment(1);BEAT0=false}
+    db.collection('users').doc(S.user.uid).set(d,{merge:true}).catch(function(){});
+  }catch(e){}
+}
+function beatStart(){
+  beat();
+  if(!BEATT){BEATT=setInterval(beat,300000);document.addEventListener('visibilitychange',function(){if(!document.hidden)beat()})}
+}
 function softRender(){var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&$('#view').contains(a))return;render();signCheck();liveCheck()}
 function mergeRules(r){var d={anon:false,perDay:18,bonus:0.01,src:'helios',budget:40,cap:false,clause:false,debt:20,ideal:0,clubMax:0,offerDays:2,lockDays:14,clauseMult:1.5,clauseGiven:0,clauseTaken:0,clauseLock:true,clauseDouble:false,copa:null,cl:null,inj:{},sus:{},start:'random'},o={};Object.keys(d).forEach(function(k){o[k]=(r&&r[k]!==undefined)?r[k]:d[k]});if(!(o.perDay>=18))o.perDay=18;return o}
 function payload(){return {uid:S.user.uid,name:S.user.name,fav:S.fav||'',cash:+S.cash.toFixed(2),v:REAL?2:1,rev:S.rev||0,coach:REAL?(S.coach!=null?toA(S.coach):null):null,cap:REAL?(S.cap!=null?toA(S.cap):null):null,selling:(function(){var o={};if(REAL)S.listings.forEach(function(l){if(l.seller==='Tú'&&P[l.id])o[P[l.id].a]=l.ask});return o})(),squad:S.squad.map(toA),lineup:{POR:S.lineup.POR.map(toA),DEF:S.lineup.DEF.map(toA),MED:S.lineup.MED.map(toA),DEL:S.lineup.DEL.map(toA)},role:(function(){var o={};Object.keys(S.role).forEach(function(k){var a=toA(+k);if(a!=null)o[a]=S.role[k]});return o})(),formation:S.formation,bo:(REAL?benchAll().map(toA):[]),saved:S.saved,tot:S.myTot,j:(function(){var ks=Object.keys(S.rp||{}).map(Number).sort(function(a,b){return a-b});return REAL?(ks.length?S.rp[ks[ks.length-1]]:0):lineupPts()})(),rp:S.rp||{},r0:S.r0==null?null:S.r0,pm:S.pm||{},shAt:S.shAt||0,bp:S.bp||{},ip:S.ip||{},ph:S.ph||'',cup:(REAL&&S.user?myCup():null)||null,cl:(REAL&&S.user?myCl():null)||null,pf:(S.pf||[]).slice(),pfT:S.pfT||0,dr:!!S.dr,ln:S.ln||{},lo:S.lo||{},val:+teamValue().toFixed(2),pl:S.squad.length}}
@@ -1750,6 +1766,7 @@ function startAuth(){
     authErr='';authBusy=false;
     if(REAL)startLeagues();else loadCatalog();
     render();
+    beatStart();
   });
 }
 function loadCatalog(){

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0B1530">
+<title>Helios · Panel de control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#070D1E;--s1:#0E1938;--s2:#142348;--line:#243459;--fg:#E9EFFB;--mut:#93A1C0;--acc:#F5A623;--acc2:#FF5A4F;--ok:#42F08C;--warn:#F5C453;--bad:#FF7A66;--blue:#5ED0E8;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 Barlow,system-ui,sans-serif}
+body{background:radial-gradient(900px 500px at 10% -10%,rgba(255,90,79,.14),transparent 60%),radial-gradient(800px 500px at 100% 0,rgba(245,166,35,.1),transparent 60%),var(--bg);min-height:100vh}
+h1,h2,h3{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:700;margin:0;letter-spacing:.3px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.top{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:3px solid var(--acc);background:linear-gradient(90deg,#0F1E3D,#2A1B5A);position:sticky;top:0;z-index:5}
+.top h1{font-size:26px}
+.top small{color:var(--mut);display:block;font-size:12px;font-style:normal;font-family:Barlow}
+.sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--s2);border-radius:10px;padding:8px 14px;font-weight:600}
+.btn.pri{background:linear-gradient(90deg,var(--acc2),var(--acc));color:#1a0f08;border:0}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.kpi{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.kpi b{display:block;font:italic 700 34px/1 'Barlow Condensed',sans-serif}
+.kpi span{color:var(--mut);font-size:13px}
+.kpi.ok b{color:var(--ok)}.kpi.warn b{color:var(--warn)}.kpi.bad b{color:var(--bad)}
+section{margin-top:22px}
+section>h2{font-size:22px;margin-bottom:8px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pad{padding:14px}
+.cols{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:600;font-size:12px;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--s1)}
+tr:last-child td{border-bottom:0}
+.scroll{overflow:auto;max-height:480px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:var(--mut)}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+.tag{display:inline-block;padding:1px 8px;border-radius:9px;background:var(--s2);border:1px solid var(--line);font-size:12px;color:var(--mut)}
+.row{display:flex;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .t{color:var(--mut);font-size:12px;margin-left:auto;white-space:nowrap}
+.alert{border-left:4px solid var(--warn);padding:9px 14px;border-bottom:1px solid var(--line)}
+.alert.bad{border-left-color:var(--bad)}
+.alert:last-child{border-bottom:0}
+input{background:var(--s2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit;width:100%}
+.login{max-width:380px;margin:12vh auto;padding:0 16px}
+.login .card{padding:22px}
+.login label{display:block;margin:12px 0 4px;color:var(--mut);font-size:13px}
+.err{color:var(--bad);margin-top:10px;font-size:14px}
+code{background:var(--s2);padding:2px 6px;border-radius:6px;font-size:13px;user-select:all}
+.bars{display:flex;align-items:flex-end;gap:5px;height:120px;padding:10px 14px 0}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--mut)}
+.bars i{display:block;width:100%;background:linear-gradient(180deg,var(--acc),var(--acc2));border-radius:4px 4px 0 0;min-height:2px}
+.mut{color:var(--mut)}
+.search{max-width:260px;padding:7px 10px}
+@media(max-width:600px){.top h1{font-size:22px}.wrap{padding:12px 10px 50px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+'use strict';
+var CFG={apiKey:"AIzaSyA8koB-8DY808Ofgvtt-qeZsZTyMP9YZkU",authDomain:"helios-fantasy.firebaseapp.com",projectId:"helios-fantasy",storageBucket:"helios-fantasy.firebasestorage.app"};
+var $app=document.getElementById('app');
+var auth,db,user=null,D=null,busy=false,lb=false,err='',sort={k:'seen',d:-1},q='',timer=null;
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function ms(v){if(v==null)return 0;if(typeof v==='number')return v;if(v.toMillis)return v.toMillis();if(v.seconds)return v.seconds*1000;var n=Date.parse(v);return isFinite(n)?n:0}
+function ago(t){if(!t)return '—';var s=Math.max(0,(Date.now()-t)/1000);if(s<90)return 'ahora';if(s<3600)return Math.round(s/60)+' min';if(s<86400)return Math.round(s/3600)+' h';var d=Math.round(s/86400);return d+(d===1?' día':' días')}
+function dt(t){if(!t)return '—';var d=new Date(t);return d.toLocaleDateString('es-ES',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
+function st(t,okH,warnH){if(!t)return 'bad';var h=(Date.now()-t)/3600000;return h<=okH?'ok':h<=warnH?'warn':'bad'}
+var PLAT={android:'Android',ios:'iPhone',windows:'Windows',mac:'Mac',linux:'Linux',otro:'Otro'};
+
+function start(){
+  try{firebase.initializeApp(CFG);auth=firebase.auth();db=firebase.firestore()}catch(e){$app.innerHTML='<div class="login"><div class="card pad">No se pudo cargar Firebase. Revisa la conexión.</div></div>';return}
+  auth.onAuthStateChanged(function(u){user=u;D=null;err='';if(timer){clearInterval(timer);timer=null}if(u)load();else draw()});
+  draw();
+}
+function draw(){
+  if(!user){
+    $app.innerHTML='<div class="login"><h1 style="font-size:40px;margin-bottom:4px">HELIOS</h1><div class="mut" style="margin-bottom:16px">Panel de control</div><form class="card" id="f" style="padding:22px"><label for="m">Correo</label><input id="m" type="email" autocomplete="username" required><label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required><button class="btn pri" style="width:100%;margin-top:16px" '+(busy?'disabled':'')+'>Entrar</button>'+(err?'<div class="err">'+esc(err)+'</div>':'')+'</form></div>';
+    document.getElementById('f').onsubmit=function(e){e.preventDefault();busy=true;err='';draw();auth.signInWithEmailAndPassword(document.getElementById('m').value.trim(),document.getElementById('p').value).catch(function(x){err='Correo o contraseña incorrectos.'}).then(function(){busy=false;if(!auth.currentUser)draw()})};
+    return;
+  }
+  if(!D){$app.innerHTML=top()+'<div class="wrap mut">'+(err?'':'Cargando datos…')+'</div>';return}
+  if(D.denied&&!D.failed){
+    $app.innerHTML=top()+'<div class="wrap"><div class="card pad"><h2>Falta darte permiso de administrador</h2><p>Esta cuenta ('+esc(user.email)+') todavía no es administradora. Solo hay que hacer esto una vez:</p><ol><li>Abre Firebase → Firestore Database.</li><li>Crea la colección <code>admins</code>.</li><li>Como ID del documento pon: <code>'+esc(user.uid)+'</code> (cualquier campo, por ejemplo <code>ok</code> = <code>true</code>).</li><li>Comprueba que las reglas de seguridad incluyen las de administrador (vienen en el archivo <code>firestore-admin.rules.txt</code>).</li><li>Vuelve aquí y pulsa Actualizar.</li></ol></div></div>';
+    return;
+  }
+  $app.innerHTML=top()+body();
+  bind();
+}
+function top(){return '<div class="top"><div><h1>HELIOS · PANEL</h1><small>'+(D&&D.at?'Actualizado '+dt(D.at):'')+'</small></div><div class="sp"></div>'+(user?'<span class="mut" style="font-size:13px">'+esc(user.email||'')+'</span><button class="btn" id="rf">Actualizar</button><button class="btn" id="lo">Salir</button>':'')+'</div>'}
+function bind(){}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('button,th');if(!t)return;
+  if(t.id==='rf'){load();return}
+  if(t.id==='lo'){auth.signOut();return}
+  if(t.dataset&&t.dataset.s){var k=t.dataset.s;sort=sort.k===k?{k:k,d:-sort.d}:{k:k,d:k==='name'||k==='plat'?1:-1};draw()}
+});
+document.addEventListener('input',function(e){if(e.target.id==='q'){q=e.target.value;var pos=e.target.selectionStart;draw();var n=document.getElementById('q');if(n){n.focus();n.setSelectionRange(pos,pos)}}});
+
+function get(p){return p.get().then(function(s){return s}).catch(function(e){if(e&&e.code==='permission-denied')throw e;return null})}
+function docs(s){var o=[];if(s)s.forEach(function(d){o.push(Object.assign({_id:d.id},d.data()))});return o}
+function load(){
+  if(lb)return;lb=true;
+  var out={at:Date.now(),denied:false};
+  db.collection('admins').doc(user.uid).get().then(function(a){
+    if(!a.exists){out.denied=true;return null}
+    return Promise.all([
+      get(db.collection('users')),get(db.collection('leagues')),
+      get(db.doc('points/season')),get(db.doc('points/avail')),get(db.doc('points/live')),get(db.doc('catalog/fixtures')),get(db.doc('catalog/main'))
+    ]).then(function(r){
+      out.users=docs(r[0]);out.leagues=docs(r[1]);
+      out.season=r[2]&&r[2].exists?r[2].data():null;out.avail=r[3]&&r[3].exists?r[3].data():null;out.live=r[4]&&r[4].exists?r[4].data():null;out.fx=r[5]&&r[5].exists?r[5].data():null;out.cat=r[6]&&r[6].exists?r[6].data():null;
+      return Promise.all(out.leagues.map(function(L){
+        var ref=db.collection('leagues').doc(L._id);
+        return Promise.all([get(ref.collection('members')),get(ref.collection('market').doc('state')),get(ref.collection('news').orderBy('ts','desc').limit(15)),get(ref.collection('deals'))]).then(function(x){
+          L.members=docs(x[0]);L.mkt=x[1]&&x[1].exists?x[1].data():null;L.news=docs(x[2]);L.deals=docs(x[3]);
+        });
+      }));
+    });
+  }).then(function(){D=out;err=''},function(e){D={at:Date.now(),denied:e&&e.code==='permission-denied',failed:true};err=e&&e.message||''}).then(function(){lb=false;draw();if(!timer)timer=setInterval(load,60000)});
+}
+
+function build(){
+  var now=Date.now(),U={};
+  D.users.forEach(function(u){U[u._id]={id:u._id,name:u.name||'—',email:u.email||'',seen:ms(u.lastSeen),plat:u.plat||'',mode:u.mode||'',ver:u.ver||'',created:ms(u.created),opens:u.opens||0,nl:u.nl||0,hb:true}});
+  D.leagues.forEach(function(L){
+    (L.members||[]).forEach(function(m){var id=m.uid||m._id;if(!U[id])U[id]={id:id,name:m.name||'—',email:'',seen:0,plat:'',mode:'',ver:'',created:0,opens:0,nl:0,hb:false};U[id].inL=(U[id].inL||0)+1});
+  });
+  var users=Object.keys(U).map(function(k){return U[k]});
+  var cnt=function(h){return users.filter(function(u){return u.seen&&now-u.seen<h*3600000}).length};
+  var days=[];for(var i=13;i>=0;i--){var d0=new Date();d0.setHours(0,0,0,0);d0=d0.getTime()-i*86400000;days.push({t:d0,n:users.filter(function(u){return u.seen>=d0&&u.seen<d0+86400000}).length})}
+  var alerts=[],mgr=0;
+  D.leagues.forEach(function(L){
+    mgr+=(L.members||[]).length;
+    var end=L.mkt&&ms(L.mkt.end);
+    if(end&&now-end>2*3600000)alerts.push({bad:1,t:'El mercado de «'+esc(L.name)+'» terminó hace '+ago(end)+' y no se ha cerrado.'});
+    var pend=(L.deals||[]).filter(function(x){return x.status==='pending'}).length;
+    if(pend)alerts.push({t:'«'+esc(L.name)+'» tiene '+pend+' oferta'+(pend>1?'s':'')+' pendiente'+(pend>1?'s':'')+'.'});
+  });
+  var inact=users.filter(function(u){return u.hb&&u.seen&&now-u.seen>7*86400000});
+  if(inact.length)alerts.push({t:inact.length+' usuario'+(inact.length>1?'s':'')+' sin conectarse desde hace más de 7 días: '+inact.slice(0,6).map(function(u){return esc(u.name)}).join(', ')+'.'});
+  var nohb=users.filter(function(u){return !u.hb});
+  if(nohb.length)alerts.push({t:nohb.length+' usuario'+(nohb.length>1?'s':'')+' aún no han abierto la versión con panel (sin dato de conexión): '+nohb.slice(0,8).map(function(u){return esc(u.name)}).join(', ')+'.'});
+  var avT=D.avail&&ms(D.avail.injAt),seT=D.season&&ms(D.season.updatedAt),fxT=D.fx&&ms(D.fx.updatedAt);
+  if(avT&&now-avT>6*3600000)alerts.push({bad:1,t:'Las lesiones no se actualizan desde hace '+ago(avT)+'.'});
+  if(seT&&now-seT>36*3600000)alerts.push({bad:1,t:'Los puntos no se actualizan desde hace '+ago(seT)+'.'});
+  var news=[];D.leagues.forEach(function(L){(L.news||[]).forEach(function(n){news.push({t:ms(n.ts),x:n.x||n.k||'',l:L.name,k:n.k})})});
+  news.sort(function(a,b){return b.t-a.t});
+  return {users:users,cnt:cnt,days:days,alerts:alerts,mgr:mgr,news:news.slice(0,30),avT:avT,seT:seT,fxT:fxT};
+}
+function body(){
+  if(D.failed)return '<div class="wrap"><div class="card pad"><h2>No se pudieron leer los datos</h2><p class="mut">'+(D.denied?'Las reglas de Firestore no permiten leer todo todavía. Publica las reglas de administrador (archivo <code>firestore-admin.rules.txt</code>) y pulsa Actualizar.':esc(err))+'</p></div></div>';
+  var B=build(),h='<div class="wrap">';
+  h+='<div class="grid kpis">'+
+   kpi(B.users.length,'Usuarios')+kpi(B.cnt(24),'Activos hoy (24 h)',B.cnt(24)?'ok':'')+kpi(B.cnt(168),'Activos 7 días')+kpi(B.cnt(720),'Activos 30 días')+kpi(D.leagues.length,'Ligas')+kpi(B.mgr,'Mánagers en ligas')+
+   '</div>';
+  h+='<section><h2>Estado del sistema</h2><div class="card"><div class="row"><span class="dot '+st(B.seT,12,36)+'"></span>Puntos y resultados<span class="t">'+ago(B.seT)+'</span></div><div class="row"><span class="dot '+st(B.avT,3,8)+'"></span>Lesionados y sancionados · '+(D.avail?Object.keys(D.avail.inj||{}).length+' lesionados, '+Object.keys(D.avail.sus||{}).length+' sancionados':'sin datos')+'<span class="t">'+ago(B.avT)+'</span></div><div class="row"><span class="dot '+st(B.fxT,24,72)+'"></span>Calendario · jornada actual '+esc(D.fx&&D.fx.round!=null?D.fx.round:(D.fx&&D.fx.cur)||'—')+'<span class="t">'+ago(B.fxT)+'</span></div></div></section>';
+  h+='<section><h2>Avisos</h2><div class="card">'+(B.alerts.length?B.alerts.map(function(a){return '<div class="alert'+(a.bad?' bad':'')+'">'+a.t+'</div>'}).join(''):'<div class="row"><span class="dot ok"></span>Todo en orden.</div>')+'</div></section>';
+  var mx=Math.max.apply(null,B.days.map(function(d){return d.n}).concat([1]));
+  h+='<section><h2>Última conexión por día</h2><div class="card"><div class="bars">'+B.days.map(function(d){return '<div title="'+d.n+' usuarios"><span>'+(d.n||'')+'</span><i style="height:'+Math.round(d.n/mx*80)+'px"></i></div>'}).join('')+'</div><div class="bars" style="height:auto;padding-top:4px;padding-bottom:10px">'+B.days.map(function(d){return '<div style="height:auto">'+new Date(d.t).getDate()+'</div>'}).join('')+'</div></div></section>';
+  var us=B.users.filter(function(u){var s=(u.name+' '+u.email).toLowerCase();return !q||s.indexOf(q.toLowerCase())>=0});
+  us.sort(function(a,b){var x=a[sort.k],y=b[sort.k];if(typeof x==='string')return sort.d*String(x).localeCompare(y);return sort.d*((x||0)-(y||0))});
+  var th=function(k,l){return '<th data-s="'+k+'">'+l+(sort.k===k?(sort.d>0?' ▲':' ▼'):'')+'</th>'};
+  h+='<section><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><h2>Usuarios</h2><span class="tag">'+us.length+'</span><span class="sp"></span><input class="search" id="q" placeholder="Buscar…" value="'+esc(q)+'" aria-label="Buscar usuario"></div><div class="card"><div class="scroll"><table><thead><tr>'+th('name','Nombre')+th('seen','Última conexión')+th('plat','Dispositivo')+th('ver','Versión')+th('opens','Aperturas')+th('inL','Ligas')+th('created','Alta')+'</tr></thead><tbody>'+
+   us.map(function(u){return '<tr><td><span class="dot '+(u.seen?st(u.seen,24,168):'')+'"></span>'+esc(u.name)+(u.email?'<div class="mut" style="font-size:12px;margin-left:16px">'+esc(u.email)+'</div>':'')+'</td><td>'+(u.seen?ago(u.seen)+' <span class="mut">· '+dt(u.seen)+'</span>':'<span class="mut">sin dato</span>')+'</td><td>'+(u.plat?PLAT[u.plat]||esc(u.plat):'—')+(u.mode==='app'?' <span class="tag">app</span>':'')+'</td><td>'+esc(u.ver||'—')+'</td><td>'+(u.opens||'—')+'</td><td>'+(u.inL||0)+'</td><td>'+(u.created?dt(u.created).slice(0,6):'—')+'</td></tr>'}).join('')+
+   '</tbody></table></div></div></section>';
+  h+='<section><h2>Ligas</h2><div class="card"><div class="scroll"><table><thead><tr><th>Liga</th><th>Administra</th><th>Mánagers</th><th>Jornada</th><th>Mercado cierra</th><th>Actividad</th><th>Código</th></tr></thead><tbody>'+
+   D.leagues.map(function(L){var n=(L.news||[])[0],end=L.mkt&&ms(L.mkt.end);return '<tr><td>'+esc(L.name)+'</td><td>'+esc(L.adminName||'—')+'</td><td>'+(L.members||[]).length+'</td><td>'+esc(L.mkt&&L.mkt.round!=null?L.mkt.round:'—')+'</td><td>'+(end?(end>Date.now()?'en '+ago(2*Date.now()-end):'hace '+ago(end)):'—')+'</td><td>'+(n?ago(ms(n.ts)):'—')+'</td><td><code>'+esc(L.code||'')+'</code></td></tr>'}).join('')+
+   '</tbody></table></div></div></section>';
+  h+='<div class="grid cols"><section><h2>Clasificación por liga</h2>'+D.leagues.map(function(L){var ms2=(L.members||[]).slice().sort(function(a,b){return (b.tot||0)-(a.tot||0)}).slice(0,5);return '<div class="card" style="margin-bottom:10px"><div class="row" style="font-weight:600">'+esc(L.name)+'</div>'+ms2.map(function(m,i){return '<div class="row"><span class="mut">'+(i+1)+'</span>'+esc(m.name||'—')+'<span class="t">'+(m.tot||0)+' pts</span></div>'}).join('')+'</div>'}).join('')+'</section>'+
+   '<section><h2>Actividad reciente</h2><div class="card">'+(B.news.length?B.news.map(function(n){return '<div class="row"><span class="tag">'+esc(n.l)+'</span><span style="white-space:normal">'+esc(n.x)+'</span><span class="t">'+ago(n.t)+'</span></div>'}).join(''):'<div class="row mut">Sin actividad.</div>')+'</div></section></div>';
+  h+='<p class="mut" style="margin-top:22px;font-size:12.5px">Solo lectura. «Última conexión» se actualiza cada 5 minutos mientras la app está abierta; los usuarios aparecerán con dato cuando abran la versión nueva de la app.</p></div>';
+  return h;
+}
+function kpi(n,l,c){return '<div class="kpi '+(c||'')+'"><b>'+n+'</b><span>'+l+'</span></div>'}
+start();
+})();
+</script>
+</body>
+</html>
