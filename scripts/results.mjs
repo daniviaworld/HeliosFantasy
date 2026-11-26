@@ -291,18 +291,20 @@ try {
       let pubOk = false;
       for (const [label, url, parse] of [
         ['Biwenger', 'https://cf.biwenger.com/api/v2/competitions/la-liga/data?lang=es&score=5', parseBiwenger],
-        ['LaLiga Fantasy', 'https://api-fantasy.llt-services.com/api/v3/players?x-lang=es', parseLaLigaFantasy],
       ]) {
         try {
           const r = await fetch(url, { headers: { ...H, Accept: 'application/json' } });
           if (!r.ok) { console.warn(`${label} (lesiones): HTTP ${r.status}`); continue; }
-          const list = parse(await r.json()); let n = 0, miss = 0;
+          const list = parse(await r.json()); let n = 0, miss = 0; const noTeam = new Set(), lost = [];
           for (const x of list) {
             const api = matcher(teamCode(x.team) || '', x.names, null);
-            if (api == null || !byApi[api]) { miss++; continue; }
+            if (!teamCode(x.team)) noTeam.add(x.team || '(sin equipo)');
+            if (api == null || !byApi[api]) { miss++; if (lost.length < 6) lost.push(x.names[0]); continue; }
             if (!fresh[api]) { fresh[api] = { s: x.info.s, n: x.info.n }; n++; }
           }
           if (list.length) pubOk = true;
+          if (noTeam.size) console.log(`  equipos sin reconocer en ${label}:`, [...noTeam].join(', '));
+          if (lost.length) console.log('  sin emparejar (ejemplos):', lost.join(', '));
           console.log(`Lesionados según ${label}:`, n, `nuevos (de ${list.length} con baja, ${miss} sin emparejar)`);
         } catch (e) { console.warn(`${label} (lesiones) falló:`, e.message); }
       }
