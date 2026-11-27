@@ -55,6 +55,10 @@ let manual = {};
 try { manual = JSON.parse(fs.readFileSync(new URL('./precios-manuales.json', import.meta.url), 'utf8')); } catch (e) { manual = {}; }
 delete manual._ayuda;
 const manualFor = (p) => { const k1 = `${norm(p.n)}|${String(p.t).toLowerCase()}`; for (const [k, v] of Object.entries(manual)) { if (k === String(p.a) || norm(k.split('|')[0]) + '|' + String(k.split('|')[1] || '').toLowerCase() === k1) return Number(v); } return null; };
+let posMan; try { posMan = JSON.parse(fs.readFileSync(new URL('./posiciones-manuales.json', import.meta.url), 'utf8')); } catch (e) { posMan = {}; }
+delete posMan._ayuda;
+const POSV = new Set(['POR', 'DEF', 'MED', 'DEL']);
+const posFor = (p) => { const k1 = `${norm(p.n)}|${String(p.t).toLowerCase()}`; for (const [k, v] of Object.entries(posMan)) { if (!POSV.has(v)) continue; if (k === String(p.a) || norm(k.split('|')[0]) + '|' + String(k.split('|')[1] || '').toLowerCase() === k1) return v; } return null; };
 const WATCH = new RegExp(process.env.WATCH || 'ferm|valverde|brahim');
 
 // Modo solo precios: si la API de plantillas no está disponible (cuenta suspendida, sin clave, sin cuota),
@@ -75,6 +79,7 @@ async function repriceOnly(why) {
   let changed = 0, same = 0, nomatch = 0, stale = 0, manualN = 0, keptAmb = 0; const dubious = [], moved = [], watch = [];
   const players = (prev.players || []).map((p) => {
     if (p.p === 'ENT') return p;
+    const fp = posFor(p); if (fp && fp !== p.p) { console.log(`Posición corregida: ${p.n} (${p.t}) ${p.p} → ${fp}`); p = { ...p, p: fp }; }
     const man = manualFor(p);
     if (man != null && man > 0) { manualN++; const v = Math.max(MIN_VALUE, Math.round(man * 100) / 100); if (Math.abs(v - p.v) > 1e-9) { moved.push({ name: p.n, team: p.t, from: p.v, to: v, manual: true }); return { ...p, v }; } return p; }
     const mi = matchValueInfo(idx, p.n, label[p.t] || p.t, p.p);
@@ -144,6 +149,7 @@ console.log(`Entrenadores: ${coaches.length}`);
 const idx = await loadValues();
 const built = buildCatalog(found, codes, squads, idx);
 const { teams, stats } = built;
+for (const p of built.players) { const fp = posFor(p); if (fp && fp !== p.p) { console.log(`Posición corregida: ${p.n} (${p.t}) ${p.p} → ${fp}`); p.p = fp; } }
 for (const p of built.players) { const m = manualFor(p); if (m != null && m > 0) p.v = Math.max(MIN_VALUE, Math.round(m * 100) / 100); }
 const players = built.players.concat(coaches);
 console.log(`Jugadores: ${stats.players} (con valor de mercado: ${stats.priced}, con precio por posición: ${stats.defaulted}, descartados: ${stats.skipped})`);
