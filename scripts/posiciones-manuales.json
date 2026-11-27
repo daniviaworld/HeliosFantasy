@@ -1,10 +1,4 @@
 {
-  "_ayuda": "Posición que manda sobre la de la API. Formato: \"Nombre del jugador|CÓDIGO del club\": \"POR\" | \"DEF\" | \"MED\" | \"DEL\". También vale el id: \"123456\": \"DEL\". Después ejecuta «Sincronizar jugadores» en GitHub Actions.",
-  "Vinicius Junior|RMA": "DEL",
-  "Vinícius Júnior|RMA": "DEL",
-  "Vini Jr.|RMA": "DEL",
-  "Vinicius Jr|RMA": "DEL",
-  "Vinicius Jr.|RMA": "DEL",
-  "Vini Jr|RMA": "DEL",
-  "Vinicius|RMA": "DEL"
+  "_ayuda": "Posición que manda sobre la de la API. Formato: \"Nombre|Club\": \"POR\" | \"DEF\" | \"MED\" | \"DEL\". El club puede ser el nombre (Real Madrid) o su código. El nombre casa por palabras que empiezan igual (Vini casa con Vini Jr. y con Vinícius Júnior). También vale el id: \"123456\": \"DEL\". Después ejecuta «Sincronizar jugadores» en GitHub Actions.",
+  "Vini|Real Madrid": "DEL"
 }
