@@ -1,4 +1,10 @@
 {
   "_ayuda": "Posición que manda sobre la de la API. Formato: \"Nombre del jugador|CÓDIGO del club\": \"POR\" | \"DEF\" | \"MED\" | \"DEL\". También vale el id: \"123456\": \"DEL\". Después ejecuta «Sincronizar jugadores» en GitHub Actions.",
-  "Vinicius Junior|RMA": "DEL"
+  "Vinicius Junior|RMA": "DEL",
+  "Vinícius Júnior|RMA": "DEL",
+  "Vini Jr.|RMA": "DEL",
+  "Vinicius Jr|RMA": "DEL",
+  "Vinicius Jr.|RMA": "DEL",
+  "Vini Jr|RMA": "DEL",
+  "Vinicius|RMA": "DEL"
 }

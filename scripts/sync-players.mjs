@@ -58,7 +58,8 @@ const manualFor = (p) => { const k1 = `${norm(p.n)}|${String(p.t).toLowerCase()}
 let posMan; try { posMan = JSON.parse(fs.readFileSync(new URL('./posiciones-manuales.json', import.meta.url), 'utf8')); } catch (e) { posMan = {}; }
 delete posMan._ayuda;
 const POSV = new Set(['POR', 'DEF', 'MED', 'DEL']);
-const posFor = (p) => { const k1 = `${norm(p.n)}|${String(p.t).toLowerCase()}`; for (const [k, v] of Object.entries(posMan)) { if (!POSV.has(v)) continue; if (k === String(p.a) || norm(k.split('|')[0]) + '|' + String(k.split('|')[1] || '').toLowerCase() === k1) return v; } return null; };
+const posUsed = new Set();
+const posFor = (p) => { const k1 = `${norm(p.n)}|${String(p.t).toLowerCase()}`; for (const [k, v] of Object.entries(posMan)) { if (!POSV.has(v)) continue; if (k === String(p.a) || norm(k.split('|')[0]) + '|' + String(k.split('|')[1] || '').toLowerCase() === k1) { posUsed.add(k); return v; } } return null; };
 const WATCH = new RegExp(process.env.WATCH || 'ferm|valverde|brahim');
 
 // Modo solo precios: si la API de plantillas no está disponible (cuenta suspendida, sin clave, sin cuota),
@@ -93,6 +94,7 @@ async function repriceOnly(why) {
     if (Math.abs(v - p.v) > 1e-9) { changed++; moved.push({ name: p.n, team: p.t, from: p.v, to: v }); return { ...p, v }; }
     same++; return p;
   });
+  for (const k of Object.keys(posMan)) { if (posUsed.has(k)) continue; const code = String(k.split('|')[1] || '').toLowerCase(); console.log(`Posición SIN coincidencia: «${k}». Jugadores de ese equipo en el catálogo: ` + (prev.players || []).filter((x) => String(x.t).toLowerCase() === code && x.p !== 'ENT').map((x) => `${x.n} (${x.p})`).join(', ')); }
   console.log(`Precios recalculados: ${changed} cambian, ${same} igual, ${nomatch} sin coincidencia (se conserva su precio), ${keptAmb} dudosos (se conserva su precio), ${manualN} manuales. ${stale} jugadores con otro club en el archivo (traspasos recientes o homónimos): se conserva su precio.`);
   moved.sort((x, y) => Math.abs(y.to - y.from) - Math.abs(x.to - x.from));
   if (moved.length) { console.log('Cambios:'); for (const m of moved.slice(0, 60)) console.log(`  · ${m.name} (${m.team}): ${m.from} M → ${m.to} M${m.manual ? ' (manual)' : ''}`); }
