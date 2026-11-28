@@ -32,8 +32,12 @@ jobs:
         id: sign
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/helios.keystore"
+            printf '%s' "$KEYSTORE_B64" | tr -d ' \r\n' | base64 -d > "$RUNNER_TEMP/helios.keystore"
             echo "KEYSTORE_FILE=$RUNNER_TEMP/helios.keystore" >> "$GITHUB_ENV"
+            # limpia caracteres invisibles que se cuelan al pegar los secretos
+            echo "KEYSTORE_PASSWORD=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -cd 'A-Za-z0-9')" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$(printf '%s' "$KEY_PASSWORD" | tr -cd 'A-Za-z0-9')" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$(printf '%s' "$KEY_ALIAS" | tr -cd 'A-Za-z0-9._-')" >> "$GITHUB_ENV"
             echo "firmado=si" >> "$GITHUB_OUTPUT"
           else
             echo "firmado=no" >> "$GITHUB_OUTPUT"
