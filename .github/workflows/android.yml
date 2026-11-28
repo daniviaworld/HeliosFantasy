@@ -7,10 +7,18 @@ on:
       - 'android/**'
       - '.github/workflows/android.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -20,11 +28,48 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-      - name: Compilar
+      - name: Preparar la firma
+        id: sign
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/helios.keystore"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/helios.keystore" >> "$GITHUB_ENV"
+            echo "firmado=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "firmado=no" >> "$GITHUB_OUTPUT"
+            echo "AVISO: faltan los secretos de firma; se compila una version de prueba sin release."
+          fi
+      - name: Compilar (firmada)
+        if: steps.sign.outputs.firmado == 'si'
+        working-directory: android
+        run: gradle assembleRelease --stacktrace --no-daemon
+      - name: Compilar (prueba)
+        if: steps.sign.outputs.firmado != 'si'
         working-directory: android
         run: gradle assembleDebug --stacktrace --no-daemon
+      - name: Preparar el APK
+        id: apk
+        run: |
+          VER=$(grep -oP 'versionName = "\K[^"]+' android/app/build.gradle.kts)
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          mkdir -p salida
+          if [ "${{ steps.sign.outputs.firmado }}" = "si" ]; then
+            cp android/app/build/outputs/apk/release/*.apk salida/helios.apk
+          else
+            cp android/app/build/outputs/apk/debug/*.apk salida/helios.apk
+          fi
+          ls -la salida
+      - name: Publicar release (para Downloader y autoactualización)
+        if: steps.sign.outputs.firmado == 'si'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-v${{ steps.apk.outputs.ver }}
+          name: Helios Fantasy Android ${{ steps.apk.outputs.ver }}
+          body: Nueva versión de Helios Fantasy para Android.
+          files: salida/helios.apk
+          make_latest: true
       - name: Guardar el APK
         uses: actions/upload-artifact@v4
         with:
           name: helios-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: salida/helios.apk
