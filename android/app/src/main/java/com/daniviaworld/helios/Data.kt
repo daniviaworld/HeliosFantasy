@@ -10,8 +10,8 @@ import com.google.firebase.firestore.Query
 
 val POS_ORDER = listOf("POR", "DEF", "MED", "DEL")
 
-data class Pl(val a: Long, val n: String, val t: String, val p: String, val v: Double)
-data class Team(val c: String, val n: String)
+data class Pl(val a: Long, val n: String, val t: String, val p: String, val v: Double, val num: Int)
+data class Team(val c: String, val n: String, val logo: Long)
 
 data class Member(
     val uid: String,
@@ -55,7 +55,7 @@ object Catalog {
                         val a = numL(m["a"]) ?: continue
                         val p = m["p"] as? String ?: continue
                         if (p == "ENT") continue
-                        pm[a] = Pl(a, m["n"] as? String ?: "?", m["t"] as? String ?: "", p, numD(m["v"]))
+                        pm[a] = Pl(a, m["n"] as? String ?: "?", m["t"] as? String ?: "", p, numD(m["v"]), numD(m["num"]).toInt())
                     }
                 }
                 val tm = HashMap<String, Team>()
@@ -64,7 +64,7 @@ object Catalog {
                     for (r in rawTeams) {
                         val m = r as? Map<*, *> ?: continue
                         val c = m["c"] as? String ?: continue
-                        tm[c] = Team(c, m["n"] as? String ?: c)
+                        tm[c] = Team(c, m["n"] as? String ?: c, numL(m["i"]) ?: 0L)
                     }
                 }
                 players = pm

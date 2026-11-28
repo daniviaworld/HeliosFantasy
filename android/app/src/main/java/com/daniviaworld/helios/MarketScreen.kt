@@ -2,6 +2,7 @@ package com.daniviaworld.helios
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,7 +83,7 @@ fun MarketScreen(store: LeagueStore, me: String) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
             Panel {
                 Text("El mercado cierra en", color = Muted, fontSize = 12.sp)
-                Text(clock, color = Fg, fontSize = 28.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
+                Text(clock, color = Fg, fontSize = 34.sp, fontFamily = Display, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
                 Text("Pujas a ciegas: gana la más alta al cierre. Caja: " + eur(cash) + " · comprometido: " + eur(committed), color = Muted, fontSize = 12.sp)
             }
         }
@@ -97,24 +103,51 @@ fun MarketScreen(store: LeagueStore, me: String) {
                     val bid = bids[p.a]
                     Row(
                         Modifier.fillMaxWidth()
-                            .background(Surface1, RoundedCornerShape(16.dp))
-                            .border(1.dp, if (bid != null) Hot else Line, RoundedCornerShape(16.dp))
+                            .background(Surface1.copy(alpha = 0.85f), RoundedCornerShape(20.dp))
+                            .border(if (bid != null) 2.dp else 1.dp, if (bid != null) Hot else Line, RoundedCornerShape(20.dp))
                             .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        PlayerArt(p, Modifier.size(84.dp, 104.dp).clip(RoundedCornerShape(12.dp)).border(2.dp, tierColor(p.v), RoundedCornerShape(12.dp)))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 PosChip(p.p)
                                 Text(
-                                    "  " + p.n, color = Fg, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, fontSize = 17.sp,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                                    p.n, fontFamily = Display, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, fontSize = 24.sp,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
                                 )
+                                Text("PTS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text((Catalog.pts[p.a] ?: 0).toString(), fontFamily = Display, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, fontSize = 26.sp)
                             }
-                            Text(Catalog.teamName(p.t) + " · " + (Catalog.pts[p.a] ?: 0) + " pts", color = Muted, fontSize = 12.sp)
-                            Text("Valor " + eur(valueOf(p)), color = Fg, fontSize = 13.sp)
-                            if (bid != null) Text("Tu puja: " + eur(bid), color = Hot, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Crest(p.t, 18.dp)
+                                Text(Catalog.teamName(p.t), color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                Text("Valor", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text(eur(valueOf(p)), fontFamily = Display, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, fontSize = 22.sp, color = Hot)
+                            }
+                            if (bid != null) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Tu puja", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text(eur(bid), fontFamily = Display, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, fontSize = 22.sp)
+                                }
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Puja mínima", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text(eur(valueOf(p)), fontFamily = Display, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, fontSize = 22.sp)
+                                }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                Text("LaLiga · " + clock, color = Muted, fontSize = 12.sp)
+                                Box(
+                                    Modifier.clip(RoundedCornerShape(14.dp)).background(BrandBrush).clickable { dlg = p; toast = "" }
+                                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                                ) {
+                                    Text(if (bid != null) "Cambiar" else "Pujar", color = Color(0xFF1B0404), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                                }
+                            }
                         }
-                        Button(onClick = { dlg = p; toast = "" }) { Text(if (bid != null) "Cambiar" else "Pujar") }
                     }
                 }
                 item { Box(Modifier.height(8.dp)) }

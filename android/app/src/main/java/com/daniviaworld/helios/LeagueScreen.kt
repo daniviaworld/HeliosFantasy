@@ -1,14 +1,20 @@
 package com.daniviaworld.helios
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -19,6 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,21 +53,30 @@ fun LeagueScreen(user: FirebaseUser, league: League, onBack: () -> Unit) {
 
     var tab by remember { mutableStateOf(0) }
     var viewUid by remember { mutableStateOf(user.uid) }
+    val mine = store.members.firstOrNull { it.uid == user.uid }
 
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().background(Surface2).padding(horizontal = 8.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().background(Head).padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "‹", color = Accent, fontSize = 30.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { onBack() }.padding(horizontal = 14.dp)
+            Image(
+                painterResource(R.drawable.logo), contentDescription = "Mis ligas",
+                modifier = Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).clickable { onBack() }
             )
-            Column(Modifier.weight(1f)) {
-                Text("HELIOS", color = Accent, fontSize = 20.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
-                Text(league.name, color = Muted, fontSize = 12.sp, maxLines = 1)
+            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                Text("HELIOS", fontFamily = Display, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, fontSize = 28.sp, lineHeight = 26.sp, color = Color.White)
+                Text(league.name, color = HeadMuted, fontSize = 13.sp, maxLines = 1)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("SALDO", color = HeadMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    eur(mine?.cash ?: 0.0), fontFamily = Display, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic,
+                    fontSize = 26.sp, color = Color.White, maxLines = 1
+                )
             }
         }
+        Box(Modifier.fillMaxWidth().height(3.dp).background(BrandBrush))
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tab) {
                 0 -> StandingsScreen(store, user.uid) { uid -> viewUid = uid; tab = 1 }
@@ -67,22 +85,34 @@ fun LeagueScreen(user: FirebaseUser, league: League, onBack: () -> Unit) {
                 else -> ActivityScreen(store)
             }
         }
-        Row(Modifier.fillMaxWidth().background(Surface2).padding(vertical = 6.dp)) {
-            TabButton("🏆", "Clasificación", tab == 0, Modifier.weight(1f)) { tab = 0 }
-            TabButton("⚽", "Equipo", tab == 1, Modifier.weight(1f)) { viewUid = user.uid; tab = 1 }
-            TabButton("🔁", "Mercado", tab == 2, Modifier.weight(1f)) { tab = 2 }
-            TabButton("📋", "Actividad", tab == 3, Modifier.weight(1f)) { tab = 3 }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)
+                .background(Surface1, RoundedCornerShape(30.dp))
+                .border(1.dp, Line, RoundedCornerShape(30.dp))
+                .padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            NavItem(0, "Mis ligas", false, Modifier.weight(1f)) { onBack() }
+            NavItem(1, "Clasificación", tab == 0, Modifier.weight(1f)) { tab = 0 }
+            NavItem(2, "Equipo", tab == 1, Modifier.weight(1f)) { viewUid = user.uid; tab = 1 }
+            NavItem(3, "Mercado", tab == 2, Modifier.weight(1f)) { tab = 2 }
+            NavItem(4, "Actividad", tab == 3, Modifier.weight(1f)) { tab = 3 }
         }
     }
 }
 
 @Composable
-fun TabButton(icon: String, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+fun NavItem(kind: Int, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(22.dp)
+    val ink = if (selected) Color(0xFF1B0404) else Fg
     Column(
-        modifier.clickable { onClick() }.padding(vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier.clip(shape).clickable { onClick() }
+            .then(if (selected) Modifier.background(BrandBrush, shape) else Modifier)
+            .padding(vertical = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(icon, fontSize = 20.sp)
-        Text(label, fontSize = 11.sp, color = if (selected) Hot else Muted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+        NavIcon(kind, ink)
+        Text(label, fontSize = 10.sp, color = ink, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
